@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -70,6 +71,15 @@ class Agency(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def agent_count(self):
+        return self.agents.count()
+
+    @property
+    def advertisement_count(self):
+        # Предположим, что у Advertisement есть ForeignKey на Agent
+        return Advertisement.objects.filter(user__agent__agency=self).count()
+
 
 # Модель агентов, связывающая агенство и агента
 class Agent(models.Model):
@@ -125,7 +135,6 @@ class Category(models.Model):
         max_length=100, verbose_name="Название категории недвижимости"
     )
     description = models.TextField(verbose_name="Описание категории недвижимости")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
         verbose_name = "Категория"
@@ -146,6 +155,7 @@ class Advertisement(models.Model):
     title = models.CharField(max_length=200, verbose_name="Заголовок")
     description = models.TextField(verbose_name="Описание")
     price = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Цена")
+    square = models.DecimalField(max_digits=4, decimal_places=1, verbose_name="Площадь")
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
@@ -202,6 +212,15 @@ class Photo(models.Model):
 
 # Модель отзыва, которая позволяет пользователям оставлять отзывы о объявлениях
 class Review(models.Model):
+    RATING_CHOICES = [
+        (0, "0 — Ужасно"),
+        (1, "1 — Очень плохо"),
+        (2, "2 — Плохо"),
+        (3, "3 — Нормально"),
+        (4, "4 — Хорошо"),
+        (5, "5 — Отлично"),
+    ]
+
     advertisement = models.ForeignKey(
         Advertisement, on_delete=models.CASCADE, verbose_name="Объявление"
     )
@@ -209,7 +228,10 @@ class Review(models.Model):
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
     rating = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(5)], verbose_name="Оценка"
+        choices=RATING_CHOICES,
+        default=5,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+        verbose_name="Оценка",
     )
     comment = models.TextField(verbose_name="Комментарий")
 
@@ -220,6 +242,12 @@ class Review(models.Model):
     def __str__(self):
         return f"Отзыв для {self.advertisement.title} от {self.user.name} - Рейтинг: {self.rating}"
 
+    def clean(self):
+        if self.advertisement.category.name.lower() != "аренда":
+            raise ValidationError(
+                "Оставлять отзывы можно только для объявлений категории 'Аренда'."
+            )
+
 
 # Модель избранных объявлений, которая позволяет пользователям сохранять объявления в избранное
 class FavoriteAdvertisement(models.Model):
@@ -229,6 +257,7 @@ class FavoriteAdvertisement(models.Model):
     advertisement = models.ForeignKey(
         Advertisement, on_delete=models.CASCADE, verbose_name="Объявление"
     )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
         verbose_name = "Избранное"
