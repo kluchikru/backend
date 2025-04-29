@@ -45,19 +45,34 @@ class UserSerializer(BaseUserSerializer):
         fields = ("id", "name", "surname", "patronymic", "phone_number", "email")
 
 
+class AdvertisementSerializer(ModelSerializer):
+    class Meta:
+        model = Advertisement
+        fields = [
+            "id",
+            "title",
+            "description",
+            "created_at",
+            "is_active",
+            "owner",
+            "property_type",
+        ]
+
+
 class TypesOfAdvertisementSerializer(ModelSerializer):
     class Meta:
         model = PropertyType
         fields = ["id", "name", "description"]
 
-# Кастомные поля в JWT 
+
+# Кастомные поля в JWT
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        token['user'] = user.__str__()
-        token['email'] = user.email
-        token['phone_number'] = user.phone_number
-        token['is_staff'] = user.is_staff
-        token['is_agent'] = user.is_agent
+        token["user"] = user.__str__()
+        token["email"] = user.email
+        token["phone_number"] = user.phone_number
+        token["is_staff"] = user.is_staff
+        token["is_agent"] = user.is_agent
         return token

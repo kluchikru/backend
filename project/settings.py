@@ -60,6 +60,7 @@ SIMPLE_JWT = {
 
 # Информация по авторизации
 DJOSER = {
+    "PASSWORD_RESET_CONFIRM_URL": "#/password/reset/confirm/{uid}/{token}",
     "LOGIN_FIELD": "email",
     "USER_ID_FIELD": "id",
     "SERIALIZERS": {

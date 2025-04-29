@@ -1,5 +1,8 @@
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.utils import timezone
+from datetime import timedelta
+
 # from rest_framework.views import APIView
 # from rest_framework.response import Response
 # from django.conf import settings
@@ -19,9 +22,28 @@ class TypesOfAdvertisementViewSet(ModelViewSet):
     queryset = PropertyType.objects.all()
     serializer_class = TypesOfAdvertisementSerializer
 
+
 # Дополнительные поля в JWT
 class CustomTokenObtainPairViewSet(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+
+# Только объявления за последние 30 дней, исключая "sold" и "rented"
+class AdvertisementViewSet(ModelViewSet):
+    serializer_class = AdvertisementSerializer
+
+    def get_queryset(self):
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        return Advertisement.objects.filter(created_at__gte=thirty_days_ago).exclude(
+            status__in=["sold", "rented"]  # Исключаем объявления с этими статусами
+        )
+
+
+# Только активные объявления
+class AdvertisementViewSetActive(ModelViewSet):
+    queryset = Advertisement.objects.filter(status="active")
+    serializer_class = AdvertisementSerializer
+
 
 # # Авторизация и запись в Cookie JWT
 # class CookieTokenObtainPairView(TokenObtainPairView):

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.urls import reverse
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import (
@@ -7,6 +8,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from django.db.models import Count, Avg, Sum
 
 
 # Менеджер для модели User, который управляет созданием пользователей
@@ -80,6 +82,11 @@ class Agency(models.Model):
         # Предположим, что у Advertisement есть ForeignKey на Agent
         return Advertisement.objects.filter(user__agent__agency=self).count()
 
+    @staticmethod
+    def agency_advertisement_count():
+        # Аннотируем количество объявлений для каждого агентства
+        return Agency.objects.annotate(ad_count=Count("agents__user__advertisement"))
+
 
 # Модель агентов, связывающая агенство и агента
 class Agent(models.Model):
@@ -96,6 +103,11 @@ class Agent(models.Model):
     class Meta:
         verbose_name = "Агент"
         verbose_name_plural = "Агенты"
+
+    @staticmethod
+    def agent_avg_ad_price():
+        # Аннотируем среднюю стоимость объявлений для каждого агента
+        return Agent.objects.annotate(avg_price=Avg("user__advertisement__price"))
 
     def __str__(self):
         return f"{self.user.name} {self.user.surname} - {self.agency.name}"
@@ -175,6 +187,14 @@ class Advertisement(models.Model):
         max_length=10, choices=STATUS_CHOICES, default="draft", verbose_name="Статус"
     )
 
+    # Метод для генерации абсолютного URL для объявления
+    def get_absolute_url(self):
+        return reverse("advertisement-detail", kwargs={"pk": self.pk})
+
+    @staticmethod
+    def total_price():
+        return Advertisement.objects.aggregate(Sum("price"))["price__sum"]
+
     def formatted_price(self):
         if self.price >= 1_000_000:
             return f"{self.price / 1_000_000:.2f} млн"
@@ -186,6 +206,7 @@ class Advertisement(models.Model):
     class Meta:
         verbose_name = "Объявление"
         verbose_name_plural = "Объявления"
+        ordering = ["-date_posted"]
 
     def __str__(self):
         return f"{self.title} - {self.formatted_price()}"
