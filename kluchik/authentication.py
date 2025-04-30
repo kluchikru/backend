@@ -1,6 +1,7 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.conf import settings
 
+# я не использую COOKIES
 
 class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
