@@ -38,8 +38,10 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        # "kluchik.authentication.CookieJWTAuthentication",
     ],
+    # "DEFAULT_PERMISSION_CLASSES": [
+    #     "rest_framework.permissions.IsAuthenticated",
+    # ],
 }
 
 # Структура JWT
@@ -54,13 +56,14 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_TYPES": ("JWT",), # Раньше был Bearer, но set_password возвращал 401
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
 }
 
 
 # Информация по авторизации
 DJOSER = {
+    "SET_PASSWORD_RETYPE": "True",
     "PASSWORD_RESET_CONFIRM_URL": "password-reset-confirm/{uid}/{token}",
     "LOGIN_FIELD": "email",
     "USER_ID_FIELD": "id",
