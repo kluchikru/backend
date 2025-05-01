@@ -1,6 +1,10 @@
+from django.utils import timezone
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.utils import timezone
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
 from datetime import timedelta
 
 # from rest_framework.views import APIView
@@ -43,6 +47,19 @@ class AdvertisementViewSet(ModelViewSet):
 class AdvertisementViewSetActive(ModelViewSet):
     queryset = Advertisement.objects.filter(status="active")
     serializer_class = AdvertisementSerializer
+
+# Смена номера телефона
+class SetPhoneNumberView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = SetPhoneNumberSerializer(data=request.data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"detail": "Номер телефона успешно обновлен"}, status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # # Авторизация и запись в Cookie JWT

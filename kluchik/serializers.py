@@ -1,17 +1,19 @@
+from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password
 from rest_framework.serializers import (
     ModelSerializer,
     EmailField,
     CharField,
     ValidationError,
+    Serializer,
 )
-from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from djoser.serializers import (
     UserCreateSerializer as BaseUserCreateSerializer,
     UserSerializer as BaseUserSerializer,
 )
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-
 from .models import *
+import re
 
 User = get_user_model()
 
@@ -76,3 +78,29 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["is_staff"] = user.is_staff
         token["is_agent"] = user.is_agent
         return token
+
+
+# Смена номера телефона
+class SetPhoneNumberSerializer(Serializer):
+    phone_number = CharField(max_length=15)
+    current_password = CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        user = self.context["request"].user
+        if not check_password(value, user.password):
+            raise ValidationError("Неверный пароль")
+        return value
+
+    def validate_phone_number(self, value):
+        pattern = re.compile(r"^\+\d{10,14}$")
+        if not pattern.match(value):
+            raise ValidationError(
+                "Номер должен быть в формате +7XXXXXXXXXX и содержать от 11 до 15 цифр"
+            )
+        return value
+
+    def save(self, **kwargs):
+        user = self.context["request"].user
+        user.phone_number = self.validated_data["phone_number"]
+        user.save()
+        return user
