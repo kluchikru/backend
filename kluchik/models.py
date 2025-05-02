@@ -11,8 +11,9 @@ from django.contrib.auth.models import (
 from django.db.models import Count, Avg, Sum
 
 
-# Менеджер для модели User, который управляет созданием пользователей
+# Кастомный менеджер для модели User
 class UserManager(BaseUserManager):
+    # Метод создания обычного пользователя
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("Email is required")
@@ -22,13 +23,14 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
+    # Метод создания суперпользователя
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         return self.create_user(email, password, **extra_fields)
 
 
-# Модель пользователя, которая используется для аутентификации
+# Кастомная модель пользователя
 class User(AbstractBaseUser, PermissionsMixin):
     name = models.CharField(max_length=100, verbose_name="Имя")
     surname = models.CharField(max_length=100, verbose_name="Фамилия")
@@ -55,16 +57,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.name} {self.surname}"
 
 
-# Модель агенства, которая описывает агенство
+# Модель агентства недвижимости
 class Agency(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     name = models.CharField(max_length=255, verbose_name="Название")
-    agent_count = models.PositiveIntegerField(
-        default=0, verbose_name="Количество агентов"
-    )
-    advertisement_count = models.PositiveIntegerField(
-        default=0, verbose_name="Количество объявлений"
-    )
 
     class Meta:
         verbose_name = "Агентство"
@@ -75,20 +71,21 @@ class Agency(models.Model):
 
     @property
     def agent_count(self):
+        """Количество агентов, связанных с агентством"""
         return self.agents.count()
 
     @property
     def advertisement_count(self):
-        # Предположим, что у Advertisement есть ForeignKey на Agent
+        """Количество объявлений, созданных агентами этого агентства"""
         return Advertisement.objects.filter(user__agent__agency=self).count()
 
     @staticmethod
     def agency_advertisement_count():
-        # Аннотируем количество объявлений для каждого агентства
+        """Аннотирует агентства количеством объявлений"""
         return Agency.objects.annotate(ad_count=Count("agents__user__advertisement"))
 
 
-# Модель агентов, связывающая агенство и агента
+# Связь между пользователем и агентством
 class Agent(models.Model):
     agency = models.ForeignKey(
         Agency,
@@ -104,16 +101,16 @@ class Agent(models.Model):
         verbose_name = "Агент"
         verbose_name_plural = "Агенты"
 
-    @staticmethod
-    def agent_avg_ad_price():
-        # Аннотируем среднюю стоимость объявлений для каждого агента
-        return Agent.objects.annotate(avg_price=Avg("user__advertisement__price"))
-
     def __str__(self):
         return f"{self.user.name} {self.user.surname} - {self.agency.name}"
 
+    @staticmethod
+    def agent_avg_ad_price():
+        """Средняя цена объявлений у каждого агента"""
+        return Agent.objects.annotate(avg_price=Avg("user__advertisement__price"))
 
-# Модель типа недвижимости, которая описывает различные типы недвижимости
+
+# Тип недвижимости (дом, квартира и т.п.)
 class PropertyType(models.Model):
     name = models.CharField(max_length=100, verbose_name="Название типа недвижимости")
     description = models.TextField(verbose_name="Описание типа недвижимости")
@@ -126,7 +123,7 @@ class PropertyType(models.Model):
         return self.name
 
 
-# Модель локации, которая описывает географическое местоположение недвижимости
+# Локация объекта недвижимости
 class Location(models.Model):
     city = models.CharField(max_length=100, verbose_name="Город")
     district = models.CharField(max_length=150, verbose_name="Район")
@@ -141,7 +138,7 @@ class Location(models.Model):
         return f"{self.city}, {self.district}, {self.street}, {self.house}"
 
 
-# Модель категории, которая описывает различные категории недвижимости
+# Категория недвижимости (аренда, продажа)
 class Category(models.Model):
     name = models.CharField(
         max_length=100, verbose_name="Название категории недвижимости"
@@ -156,7 +153,7 @@ class Category(models.Model):
         return self.name
 
 
-# Модель объявления, которая содержит информацию о недвижимости, выставленной на продажу или аренду
+# Объявление о продаже или аренде недвижимости
 class Advertisement(models.Model):
     STATUS_CHOICES = [
         ("draft", "Черновик"),
@@ -164,6 +161,7 @@ class Advertisement(models.Model):
         ("sold", "Продано"),
         ("rented", "Арендовано"),
     ]
+
     title = models.CharField(max_length=200, verbose_name="Заголовок")
     description = models.TextField(verbose_name="Описание")
     price = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Цена")
@@ -187,22 +185,6 @@ class Advertisement(models.Model):
         max_length=10, choices=STATUS_CHOICES, default="draft", verbose_name="Статус"
     )
 
-    # Метод для генерации абсолютного URL для объявления
-    def get_absolute_url(self):
-        return reverse("advertisement-detail", kwargs={"pk": self.pk})
-
-    @staticmethod
-    def total_price():
-        return Advertisement.objects.aggregate(Sum("price"))["price__sum"]
-
-    def formatted_price(self):
-        if self.price >= 1_000_000:
-            return f"{self.price / 1_000_000:.2f} млн"
-        elif self.price >= 1_000:
-            return f"{self.price / 1_000:.2f} тыс"
-        else:
-            return f"{self.price:.2f} руб."
-
     class Meta:
         verbose_name = "Объявление"
         verbose_name_plural = "Объявления"
@@ -211,8 +193,25 @@ class Advertisement(models.Model):
     def __str__(self):
         return f"{self.title} - {self.formatted_price()}"
 
+    def get_absolute_url(self):
+        """URL для отображения деталей объявления"""
+        return reverse("advertisement-detail", kwargs={"pk": self.pk})
 
-# Модель фотографии, которая хранит изображения, связанные с объявлениями
+    @staticmethod
+    def total_price():
+        """Общая сумма всех объявлений"""
+        return Advertisement.objects.aggregate(Sum("price"))["price__sum"]
+
+    def formatted_price(self):
+        """Форматированное отображение цены"""
+        if self.price >= 1_000_000:
+            return f"{self.price / 1_000_000:.2f} млн"
+        elif self.price >= 1_000:
+            return f"{self.price / 1_000:.2f} тыс"
+        return f"{self.price:.2f} руб."
+
+
+# Фото, прикреплённые к объявлениям
 class Photo(models.Model):
     advertisement = models.ForeignKey(
         Advertisement,
@@ -228,10 +227,10 @@ class Photo(models.Model):
         verbose_name_plural = "Фотографии"
 
     def __str__(self):
-        return f"Фото для объявления: {self.advertisement.title} - Порядок отображения: {self.display_order}"
+        return f"Фото для объявления: {self.advertisement.title} - Порядок: {self.display_order}"
 
 
-# Модель отзыва, которая позволяет пользователям оставлять отзывы о объявлениях
+# Отзывы пользователей на объявления
 class Review(models.Model):
     RATING_CHOICES = [
         (0, "0 — Ужасно"),
@@ -264,13 +263,14 @@ class Review(models.Model):
         return f"Отзыв для {self.advertisement.title} от {self.user.name} - Рейтинг: {self.rating}"
 
     def clean(self):
+        """Ограничивает отзывы только объявлениями с категорией 'Аренда'"""
         if self.advertisement.category.name.lower() != "аренда":
             raise ValidationError(
                 "Оставлять отзывы можно только для объявлений категории 'Аренда'."
             )
 
 
-# Модель избранных объявлений, которая позволяет пользователям сохранять объявления в избранное
+# Модель для хранения избранных объявлений пользователя
 class FavoriteAdvertisement(models.Model):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
@@ -288,7 +288,7 @@ class FavoriteAdvertisement(models.Model):
         return f"Избранное: {self.user.name} - {self.advertisement.title}"
 
 
-# Модель уведомлений, которая хранит уведомления для пользователей о событиях, связанных с объявлениями
+# Уведомления, отправляемые пользователю
 class Notification(models.Model):
     NOTIFICATION_TYPE_CHOICES = [
         ("new_ad", "Новое объявление"),
@@ -296,6 +296,7 @@ class Notification(models.Model):
         ("ad_sold", "Недвижимость продана"),
         ("ad_rented", "Недвижимость арендована"),
     ]
+
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
@@ -315,7 +316,7 @@ class Notification(models.Model):
         return f"Уведомление для {self.user.name}: {self.notification_type}"
 
 
-# Модель статистики, которая хранит данные о количестве пользователей и объявлений на определенную дату
+# Модель статистики пользователей и объявлений
 class Statistics(models.Model):
     date = models.DateField(verbose_name="Дата")
     user_count = models.IntegerField(verbose_name="Пользователи")

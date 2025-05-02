@@ -1,25 +1,28 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
+
 from kluchik.views import CustomTokenObtainPairViewSet, SetPhoneNumberView
 
+
+# === Основные URL-маршруты проекта ===
+
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api/", include("kluchik.urls")),  # API DRF
+    path("admin/", admin.site.urls),  # Панель администратора Django
+    path("api/", include("kluchik.urls")),  # Основное API (приложение kluchik)
+    # Обновление номера телефона (требуется авторизация)
     path(
         "auth/users/set_phone_number/",
         SetPhoneNumberView.as_view(),
         name="set_phone_number",
     ),
-    re_path(r"^auth/", include("djoser.urls")),  # Авторизация Djoser
-    # path(
-    #     "auth/jwt/create/",
-    #     CookieTokenObtainPairView.as_view(),
-    #     name="jwt-create-cookie",
-    # ),
+    # Стандартные маршруты Djoser (регистрация, сброс пароля и т.д.)
+    re_path(r"^auth/", include("djoser.urls")),
+    # JWT авторизация через кастомный сериализатор
     path(
         "auth/jwt/create/",
         CustomTokenObtainPairViewSet.as_view(),
         name="jwt-create",
     ),
-    re_path(r"^auth/", include("djoser.urls.jwt")),  # Авторизация Djoser + JWT
+    # JWT endpoints от Djoser (refresh, verify и т.д.)
+    re_path(r"^auth/", include("djoser.urls.jwt")),
 ]
