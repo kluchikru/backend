@@ -11,21 +11,28 @@ class UserAdmin(admin.ModelAdmin):
         "name",
         "surname",
         "email",
+        "phone_number",
         "is_active",
         "is_staff",
         "is_agent",
         "date_joined",
+        "get_subscription_count",
     )
     # Фильтры по статусам
     list_filter = ("is_active", "is_staff", "is_agent")
     # Поиск по имени, фамилии и email
-    search_fields = ("name", "surname", "email")
+    search_fields = ("name", "surname", "email", "phone_number")
     # Ссылки на редактирование
     list_display_links = ("name", "surname")
     # Только для чтения — нельзя редактировать вручную
     readonly_fields = ("date_joined",)
     # Упрощение навигации по дате
     date_hierarchy = "date_joined"
+
+    # Метод для отображения количества подписок пользователя
+    @admin.display(description="Количество подписок")
+    def get_subscription_count(self, obj):
+        return obj.subscriptions.count()  # Считаем количество подписок
 
 
 # Админка для модели Agency
@@ -152,3 +159,22 @@ class StatisticsAdmin(admin.ModelAdmin):
     list_display = ("date", "user_count", "advertisement_count")
     list_filter = ("date",)
     date_hierarchy = "date"
+
+
+# Админка для модели AgencySubscription
+@admin.register(AgencySubscription)
+class AgencySubscriptionAdmin(admin.ModelAdmin):
+    # Отображаемые поля
+    list_display = ("user", "agency", "subscribed_at")
+
+    # Поиск по пользователям и агентствам
+    search_fields = ("user__name", "agency__name")
+
+    # Фильтрация по агентствам
+    list_filter = ("agency",)
+
+    # Сортировка по дате подписки
+    ordering = ("subscribed_at",)
+
+    # Поле только для чтения
+    readonly_fields = ("subscribed_at",)

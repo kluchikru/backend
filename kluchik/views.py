@@ -7,10 +7,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from datetime import timedelta
 
-# from rest_framework.views import APIView
-# from rest_framework.response import Response
-# from django.conf import settings
-
 from .models import *
 from .serializers import *
 
@@ -38,15 +34,23 @@ class AdvertisementViewSet(ModelViewSet):
 
     def get_queryset(self):
         thirty_days_ago = timezone.now() - timedelta(days=30)
-        return Advertisement.objects.filter(created_at__gte=thirty_days_ago).exclude(
-            status__in=["sold", "rented"]  # Исключаем объявления с этими статусами
+        return (
+            Advertisement.objects.filter(created_at__gte=thirty_days_ago)
+            .exclude(
+                status__in=["sold", "rented"]  # Исключаем объявления с этими статусами
+            )
+            .select_related("user", "location", "category", "property_type")
         )
 
 
 # Представление только для активных объявлений
 class AdvertisementViewSetActive(ModelViewSet):
-    queryset = Advertisement.objects.filter(status="active")
     serializer_class = AdvertisementSerializer
+    queryset = (
+        Advertisement.objects.filter(status="active")
+        .select_related("user", "category", "location")
+        .prefetch_related("photos")
+    )  # список связанных фото
 
 
 # Представление для смены номера телефона пользователя
@@ -64,4 +68,3 @@ class SetPhoneNumberView(APIView):
                 status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-

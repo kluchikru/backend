@@ -11,6 +11,59 @@ from django.contrib.auth.models import (
 from django.db.models import Count, Avg, Sum
 
 
+# Модель агентства недвижимости
+class Agency(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    name = models.CharField(max_length=255, verbose_name="Название")
+
+    class Meta:
+        verbose_name = "Агентство"
+        verbose_name_plural = "Агентства"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def agent_count(self):
+        """Количество агентов, связанных с агентством"""
+        return self.agents.count()
+
+    @property
+    def advertisement_count(self):
+        """Количество объявлений, созданных агентами этого агентства"""
+        return Advertisement.objects.filter(user__agent__agency=self).count()
+
+    @staticmethod
+    def agency_advertisement_count():
+        """Аннотирует агентства количеством объявлений"""
+        return Agency.objects.annotate(ad_count=Count("agents__user__advertisement"))
+
+
+# Связь между агентом и агентством
+class Agent(models.Model):
+    agency = models.ForeignKey(
+        Agency,
+        on_delete=models.CASCADE,
+        related_name="agents",
+        verbose_name="Агентство",
+    )
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь"
+    )
+
+    class Meta:
+        verbose_name = "Агент"
+        verbose_name_plural = "Агенты"
+
+    def __str__(self):
+        return f"{self.user.name} {self.user.surname} - {self.agency.name}"
+
+    @staticmethod
+    def agent_avg_ad_price():
+        """Средняя цена объявлений у каждого агента"""
+        return Agent.objects.annotate(avg_price=Avg("user__advertisement__price"))
+
+
 # Кастомный менеджер для модели User
 class UserManager(BaseUserManager):
     # Метод создания обычного пользователя
@@ -43,6 +96,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True, verbose_name="Активен")
     is_staff = models.BooleanField(default=False, verbose_name="Сотрудник")
     is_agent = models.BooleanField(default=False, verbose_name="Агент")
+    subscriptions = models.ManyToManyField(
+        Agency,
+        through="AgencySubscription",
+        related_name="subscribers",
+        verbose_name="Подписки на агентства",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -57,57 +116,17 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.name} {self.surname}"
 
 
-# Модель агентства недвижимости
-class Agency(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    name = models.CharField(max_length=255, verbose_name="Название")
+# Связь между агенством и подписчиками агенства
+class AgencySubscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    agency = models.ForeignKey(Agency, on_delete=models.CASCADE)
+    subscribed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = "Агентство"
-        verbose_name_plural = "Агентства"
+        unique_together = ("user", "agency")  # чтобы не было дублей
 
     def __str__(self):
-        return self.name
-
-    @property
-    def agent_count(self):
-        """Количество агентов, связанных с агентством"""
-        return self.agents.count()
-
-    @property
-    def advertisement_count(self):
-        """Количество объявлений, созданных агентами этого агентства"""
-        return Advertisement.objects.filter(user__agent__agency=self).count()
-
-    @staticmethod
-    def agency_advertisement_count():
-        """Аннотирует агентства количеством объявлений"""
-        return Agency.objects.annotate(ad_count=Count("agents__user__advertisement"))
-
-
-# Связь между пользователем и агентством
-class Agent(models.Model):
-    agency = models.ForeignKey(
-        Agency,
-        on_delete=models.CASCADE,
-        related_name="agents",
-        verbose_name="Агентство",
-    )
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="Пользователь"
-    )
-
-    class Meta:
-        verbose_name = "Агент"
-        verbose_name_plural = "Агенты"
-
-    def __str__(self):
-        return f"{self.user.name} {self.user.surname} - {self.agency.name}"
-
-    @staticmethod
-    def agent_avg_ad_price():
-        """Средняя цена объявлений у каждого агента"""
-        return Agent.objects.annotate(avg_price=Avg("user__advertisement__price"))
+        return f"{self.user} подписан на {self.agency}"
 
 
 # Тип недвижимости (дом, квартира и т.п.)
