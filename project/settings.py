@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
-
+import os
 
 # === Базовые настройки проекта ===
 
@@ -10,6 +10,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Внимание: храните секретный ключ в .env файле на продакшене!
 SECRET_KEY = "django-insecure-qm62lfi_za5v5tr)*3jocz$rx$j34gf44q4x$)b5$o-jo)r_#m"
+
+# Для загрузки медиафайлов
+MEDIA_URL = "/media/"  # URL для доступа к медиафайлам
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Папка, где будут храниться медиафайлы
 
 # Включайте DEBUG только при локальной разработке
 DEBUG = True

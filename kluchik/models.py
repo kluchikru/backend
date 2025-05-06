@@ -124,6 +124,8 @@ class AgencySubscription(models.Model):
 
     class Meta:
         unique_together = ("user", "agency")  # чтобы не было дублей
+        verbose_name = "Подписка на агенства"
+        verbose_name_plural = "Подписки на агенства"
 
     def __str__(self):
         return f"{self.user} подписан на {self.agency}"
@@ -203,6 +205,9 @@ class Advertisement(models.Model):
     status = models.CharField(
         max_length=10, choices=STATUS_CHOICES, default="draft", verbose_name="Статус"
     )
+    advertisement_file = models.FileField(
+        upload_to="advertisements_files/", null=True, blank=True, verbose_name="Файл объявления"
+    )
 
     class Meta:
         verbose_name = "Объявление"
@@ -230,6 +235,22 @@ class Advertisement(models.Model):
         return f"{self.price:.2f} руб."
 
 
+# Файл к объявлению (планировка или договор)
+class AdvertisementFile(models.Model):
+    advertisement = models.ForeignKey(
+        Advertisement,
+        on_delete=models.CASCADE,
+        related_name="files",
+        verbose_name="Объявление",
+    )
+    file = models.FileField(upload_to="advertisement_files/", verbose_name="Файл")
+    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата загрузки")
+
+    class Meta:
+        verbose_name = "Файл объявления"
+        verbose_name_plural = "Файлы объявлений"
+
+
 # Фото, прикреплённые к объявлениям
 class Photo(models.Model):
     advertisement = models.ForeignKey(
@@ -238,7 +259,7 @@ class Photo(models.Model):
         related_name="photos",
         verbose_name="Объявление",
     )
-    image_url = models.URLField(verbose_name="URL изображения")
+    image = models.ImageField(upload_to="photos/", verbose_name="Изображение", null=True)
     display_order = models.IntegerField(verbose_name="Порядок отображения")
 
     class Meta:

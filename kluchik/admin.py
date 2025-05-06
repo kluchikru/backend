@@ -1,7 +1,13 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
+from django.contrib.admin import SimpleListFilter
+import matplotlib.pyplot as plt
+import io
 from .models import *
-
 
 # Админка для модели User
 @admin.register(User)
@@ -91,7 +97,7 @@ class CategoryAdmin(admin.ModelAdmin):
 # Админка для модели Advertisement
 @admin.register(Advertisement)
 class AdvertisementAdmin(admin.ModelAdmin):
-    list_display = ("title", "display_price", "status", "date_posted")
+    list_display = ("title", "display_price", "status", "date_posted", "advertisement_file")
     list_filter = ("status", "property_type", "category")
     search_fields = ("title", "description")
     list_display_links = ("title",)
@@ -107,9 +113,17 @@ class AdvertisementAdmin(admin.ModelAdmin):
 # Админка для модели Photo
 @admin.register(Photo)
 class PhotoAdmin(admin.ModelAdmin):
-    list_display = ("advertisement", "image_url", "display_order")
+    list_display = ("advertisement", "get_image_preview", "display_order")
     list_filter = ("advertisement",)
     search_fields = ("advertisement__title",)
+
+    def get_image_preview(self, obj):
+        if obj.image:
+            return f'<img src="{obj.image.url}" width="100" />'
+        return "Нет изображения"
+
+    get_image_preview.short_description = "Изображение"
+    get_image_preview.allow_tags = True  # Разрешаем HTML для отображения тега img
 
 
 # Админка для модели Review
@@ -159,6 +173,43 @@ class StatisticsAdmin(admin.ModelAdmin):
     list_display = ("date", "user_count", "advertisement_count")
     list_filter = ("date",)
     date_hierarchy = "date"
+    actions = ["generate_pdf_with_pie"]
+
+    @admin.action(description="PDF с круговой диаграммой")
+    def generate_pdf_with_pie(self, request, queryset):
+        # Сбор данных
+        total_users = sum(stat.user_count for stat in queryset)
+        total_ads = sum(stat.advertisement_count for stat in queryset)
+
+        labels = ["Пользователи", "Объявления"]
+        sizes = [total_users, total_ads]
+        colors = ["#66b3ff", "#ff9999"]
+
+        # Создание круговой диаграммы
+        fig, ax = plt.subplots()
+        ax.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors, startangle=90)
+        ax.axis("equal")
+
+        # Сохраняем диаграмму во временный буфер
+        img_buffer = io.BytesIO()
+        plt.savefig(img_buffer, format='PNG')
+        plt.close(fig)
+        img_buffer.seek(0)
+
+        # PDF с вставленной диаграммой
+        pdf_buffer = io.BytesIO()
+        p = canvas.Canvas(pdf_buffer, pagesize=A4)
+        p.setFont("Helvetica-Bold", 16)
+
+        # Вставка изображения
+        image = ImageReader(img_buffer)
+        p.drawImage(image, 100, 400, width=400, height=400)
+
+        p.showPage()
+        p.save()
+        pdf_buffer.seek(0)
+
+        return HttpResponse(pdf_buffer, content_type="application/pdf")
 
 
 # Админка для модели AgencySubscription
