@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 from django.conf import settings
 from django.urls import reverse
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -9,7 +10,8 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.db.models import Count, Avg, Sum
-
+from project.settings import SITE_NAME
+from unidecode import unidecode
 
 # Модель агентства недвижимости
 class Agency(models.Model):
@@ -208,11 +210,32 @@ class Advertisement(models.Model):
     advertisement_file = models.FileField(
         upload_to="advertisements_files/", null=True, blank=True, verbose_name="Файл объявления"
     )
+    external_url = models.URLField(
+        max_length=500, null=True, blank=True, verbose_name="Внешняя ссылка"
+    )
+    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name="Слаг")
 
     class Meta:
         verbose_name = "Объявление"
         verbose_name_plural = "Объявления"
         ordering = ["-date_posted"]
+
+    def save(self, *args, **kwargs):
+        # Первый вызов — сохраняем без slug, чтобы получить id
+        if not self.id:
+            super().save(*args, **kwargs)
+
+        # Если slug ещё не задан — генерируем
+        if not self.slug:
+            base_slug = custom_slugify(self.title)
+            self.slug = f"{base_slug}-{self.id}"
+
+        # Генерация внешней ссылки
+        if not self.external_url:
+            self.external_url = f"{SITE_NAME}/advertisement/{self.slug}/"
+
+        # Второй вызов — уже со slug и external_url
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.title} - {self.formatted_price()}"
@@ -233,7 +256,7 @@ class Advertisement(models.Model):
         elif self.price >= 1_000:
             return f"{self.price / 1_000:.2f} тыс"
         return f"{self.price:.2f} руб."
-
+    
 
 # Файл к объявлению (планировка или договор)
 class AdvertisementFile(models.Model):
@@ -368,3 +391,9 @@ class Statistics(models.Model):
 
     def __str__(self):
         return f"Статистика на {self.date}: Пользователи - {self.user_count}, Объявления - {self.advertisement_count}"
+
+
+# Кастомная функция
+def custom_slugify(value):
+    value = unidecode(value)  # Транслитерация
+    return slugify(value) 

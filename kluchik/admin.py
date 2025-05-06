@@ -7,6 +7,7 @@ from reportlab.lib.utils import ImageReader
 from django.contrib.admin import SimpleListFilter
 import matplotlib.pyplot as plt
 import io
+from django.db.models import Q
 from .models import *
 
 # Админка для модели User
@@ -97,17 +98,32 @@ class CategoryAdmin(admin.ModelAdmin):
 # Админка для модели Advertisement
 @admin.register(Advertisement)
 class AdvertisementAdmin(admin.ModelAdmin):
-    list_display = ("title", "display_price", "status", "date_posted", "advertisement_file")
+    list_display = ("title", "display_price", "status", "date_posted", "advertisement_file", "external_url")
     list_filter = ("status", "property_type", "category")
-    search_fields = ("title", "description")
+    search_fields = ("title", "description", "external_url")
     list_display_links = ("title",)
     date_hierarchy = "date_posted"
     raw_id_fields = ("user",)
+    # readonly_fields = ("slug", "external_url")  # Устанавливаем эти поля как доступные только для чтения
 
     # Показываем цену в более читабельном формате
     @admin.display(description="Цена", ordering="price")
     def display_price(self, obj):
         return obj.formatted_price()
+    
+    def get_search_results(self, request, queryset, search_term):
+        # Стандартный icontains-поиск (регистр НЕ важен)
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+
+        # Расширим его нашим кастомным contains-поиском (регистр ВАЖЕН)
+        contains_qs = self.model.objects.filter(
+            Q(title__contains=search_term) |
+            Q(description__contains=search_term)
+        )
+
+        # Объединяем оба queryset'а и исключаем дубли
+        final_qs = queryset | contains_qs
+        return final_qs.distinct(), use_distinct
 
 
 # Админка для модели Photo

@@ -23,6 +23,14 @@ class TypesOfAdvertisementViewSet(ModelViewSet):
     serializer_class = TypesOfAdvertisementSerializer
 
 
+# Представление категорий недвижимости
+class PropertyTypeViewSet(ModelViewSet):
+    serializer_class = TypesOfAdvertisementSerializer
+
+    def get_queryset(self):
+        return PropertyType.objects.all().values_list('name', flat=True)
+
+
 # Представление, расширяющее JWT-токен с дополнительными полями
 class CustomTokenObtainPairViewSet(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -40,6 +48,7 @@ class AdvertisementViewSet(ModelViewSet):
                 status__in=["sold", "rented"]  # Исключаем объявления с этими статусами
             )
             .select_related("user", "location", "category", "property_type")
+            .values('title', 'price')
         )
 
 
@@ -68,3 +77,46 @@ class SetPhoneNumberView(APIView):
                 status=status.HTTP_200_OK,
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# Метод удаления объявления по ID
+class DeleteAdvertisement(APIView):
+    def delete(self, request, *args, **kwargs):
+        # Удалить объявление по ID
+        advertisement_id = kwargs.get("pk")
+        try:
+            advertisement = Advertisement.objects.get(pk=advertisement_id)
+            advertisement.delete()
+            return Response({"detail": "Объявление удалено."}, status=status.HTTP_204_NO_CONTENT)
+        except Advertisement.DoesNotExist:
+            return Response({"detail": "Объявление не найдено."}, status=status.HTTP_404_NOT_FOUND)
+
+
+# Метод обновления статуса объявления
+class UpdateAdvertisementStatus(APIView):
+    def put(self, request, *args, **kwargs):
+        # Получаем ID объявления из URL
+        advertisement_id = kwargs.get("pk")
+        
+        # Получаем новый статус из данных запроса
+        new_status = request.data.get("status")
+
+        # Проверяем, что статус передан и является допустимым
+        if new_status not in dict(Advertisement.STATUS_CHOICES):
+            return Response(
+                {"detail": "Неверный статус. Допустимые статусы: draft, active, sold, rented."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Получаем объект объявления по ID
+            advertisement = Advertisement.objects.get(pk=advertisement_id)
+            
+            # Обновляем статус объявления
+            advertisement.status = new_status
+            advertisement.save()
+
+            return Response({"detail": f"Объявление обновлено на статус '{new_status}'."}, status=status.HTTP_200_OK)
+        except Advertisement.DoesNotExist:
+            # Если объявление не найдено
+            return Response({"detail": "Объявление не найдено."}, status=status.HTTP_404_NOT_FOUND)
