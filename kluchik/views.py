@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework import status
 from datetime import timedelta
 
@@ -11,20 +12,60 @@ from .models import *
 from .serializers import *
 
 
-# Представление для управления типами недвижимости
-class TypesOfAdvertisementViewSet(ModelViewSet):
-    queryset = PropertyType.objects.all()
-    serializer_class = TypesOfAdvertisementSerializer
-
-
 # Представление для управления объектами недвижимости
-class AdvertisementViewSet(ModelViewSet):
-    serializer_class = AdvertisementSerializer
+class AdvertisementListViewSet(ReadOnlyModelViewSet):
+    serializer_class = AdvertisementListSerializer
 
     def get_queryset(self):
-        return Advertisement.objects.all().select_related(
-            "user", "location", "category", "property_type"
+        return (
+            Advertisement.objects.filter(status="active")
+            .select_related("location", "category", "property_type")
+            .prefetch_related("photos")
         )
+
+
+# Представление для получения последних 3 объявлений
+class LatestAdvertisementsViewSet(ReadOnlyModelViewSet):
+    serializer_class = AdvertisementListSerializer
+
+    def get_queryset(self):
+        return Advertisement.objects.filter(status="active").order_by("-date_posted")[
+            :3
+        ]
+
+
+# Представление для получения 3 самых популярных агентств
+class PopularAgenciesViewSet(ReadOnlyModelViewSet):
+    serializer_class = PopularAgencySerializer
+
+    def get_queryset(self):
+        return Agency.with_count().order_by("-subscriber_count")[:3]
+
+
+# Представление для получения 3 самых популярных объявления
+class PopularAdvertisementViewSet(ReadOnlyModelViewSet):
+    serializer_class = PopularAdvertisementSerializer
+
+    def get_queryset(self):
+        return (
+            Advertisement.objects.filter(status="active")  # только активные объявления
+            .annotate(
+                favorite_count=Count(
+                    "favoriteadvertisement"
+                )  # считаем количество избранных
+            )
+            .order_by(
+                "-favorite_count",
+                "-date_posted",  # сортируем по количеству избранных и дате
+            )[:3]
+        )
+
+
+# Представление для управления типами недвижимости
+class TypesOfAdvertisementViewSet(ReadOnlyModelViewSet):
+
+    queryset = PropertyType.objects.all()
+    serializer_class = TypesOfAdvertisementSerializer
 
 
 #! DJANGO 1-4

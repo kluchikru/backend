@@ -26,12 +26,6 @@ class Agency(models.Model):
     def __str__(self):
         return self.name
 
-    @staticmethod
-    def with_subscriber_count():
-        return Agency.objects.annotate(
-            subscriber_count=Count("subscribers", distinct=True)
-        )
-
     @property
     def agent_count(self):
         """Количество агентов, связанных с агентством"""
@@ -39,13 +33,15 @@ class Agency(models.Model):
 
     @property
     def advertisement_count(self):
-        """Количество объявлений, созданных агентами этого агентства"""
-        return Advertisement.objects.filter(user__agent__agency=self).count()
-
+        """Количество объявлений, связанных с агентством"""
+        return self.advertisements.count()
+    
     @staticmethod
-    def agency_advertisement_count():
-        """Аннотирует агентства количеством объявлений"""
-        return Agency.objects.annotate(ad_count=Count("agents__user__advertisement"))
+    def with_count():
+        return Agency.objects.annotate(
+            subscriber_count=Count("subscribers", distinct=True),
+            annotated_agent_count=Count("agents", distinct=True),
+        )
 
 
 # Связь между агентом и агентством
@@ -231,6 +227,14 @@ class Advertisement(models.Model):
     )
     slug = models.SlugField(
         max_length=255, unique=True, blank=True, null=True, verbose_name="Слаг"
+    )
+    agency = models.ForeignKey(
+        Agency,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="advertisements",
+        verbose_name="Агентство",
     )
 
     class Meta:

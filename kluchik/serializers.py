@@ -7,6 +7,7 @@ from rest_framework.serializers import (
     ValidationError,
     Serializer,
 )
+from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from djoser.serializers import (
     UserCreateSerializer as BaseUserCreateSerializer,
@@ -58,15 +59,102 @@ class UserSerializer(BaseUserSerializer):
         )
 
 
+# Сериализатор для модели объявлений в ленте
+class AdvertisementListSerializer(serializers.ModelSerializer):
+    location = serializers.StringRelatedField(read_only=True)
+    category = serializers.StringRelatedField(read_only=True)
+    property_type = serializers.StringRelatedField(read_only=True)
+    image = serializers.SerializerMethodField()  # Поле для первой фотки
+
+    class Meta:
+        model = Advertisement
+        fields = [
+            "id",
+            "title",
+            "price",
+            "square",
+            "location",
+            "category",
+            "property_type",
+            "external_url",
+            "image",
+        ]
+
+    def get_image(self, obj):
+        first_photo = obj.photos.order_by("display_order").first()
+        if first_photo and first_photo.image:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(first_photo.image.url)
+            return first_photo.image.url
+        return None
+
+
+# Сериализатор для последнего объявления (используется в главной странице - виджет)
+class LatestAdvertisementSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Advertisement
+        fields = ["id", "title", "price", "image", "category"]
+
+    def get_image(self, obj):
+        first_photo = obj.photos.order_by("display_order").first()
+        if first_photo and first_photo.image:
+            request = self.context.get("request")
+            return (
+                request.build_absolute_uri(first_photo.image.url)
+                if request
+                else first_photo.image.url
+            )
+        return None
+
+
+#  Сериализатор для модели популярных агентств (используется в главной странице - виджет)
+class PopularAgencySerializer(serializers.ModelSerializer):
+    subscriber_count = serializers.IntegerField()
+    active_ads_count = serializers.SerializerMethodField()
+    annotated_agent_count = serializers.IntegerField()
+
+    class Meta:
+        model = Agency
+        fields = ["id", "name", "subscriber_count", "active_ads_count", "annotated_agent_count"]
+
+    def get_active_ads_count(self, obj):
+        return obj.advertisements.filter(status="active").count()
+
+
+# Сериализатор для отображения популяного объявления (используется в главной странице - виджет)
+class PopularAdvertisementSerializer(serializers.ModelSerializer):
+    favorite_count = serializers.IntegerField()
+    image = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = Advertisement
+        fields = [
+            "id",
+            "title",
+            "price",
+            "favorite_count",
+            "category",
+            "image",
+        ]
+
+    def get_image(self, obj):
+        first_photo = obj.photos.order_by("display_order").first()
+        if first_photo and first_photo.image:
+            request = self.context.get("request")
+            return (
+                request.build_absolute_uri(first_photo.image.url)
+                if request
+                else first_photo.image.url
+            )
+        return None
+
+
 # Сериализатор для модели объявлений
-from rest_framework import serializers
-from .models import Advertisement
-
-
 class AdvertisementSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField(
-        read_only=True
-    )  # Отобразит __str__ пользователя
+    user = serializers.StringRelatedField(read_only=True)
     property_type = serializers.StringRelatedField(read_only=True)
     location = serializers.StringRelatedField(read_only=True)
     category = serializers.StringRelatedField(read_only=True)

@@ -58,6 +58,14 @@ class AgencyAdmin(admin.ModelAdmin):
     ordering = ("created_at",)
     readonly_fields = ("get_agent_count", "get_advertisement_count")
 
+    # Аннотация
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            subscriber_count=Count("subscribers", distinct=True),
+            ad_count=Count("advertisements", distinct=True),
+        )
+
     # Пользовательское отображение количества агентов
     @admin.display(description="Количество агентов")
     def get_agent_count(self, obj):
@@ -67,11 +75,6 @@ class AgencyAdmin(admin.ModelAdmin):
     @admin.display(description="Количество объявлений")
     def get_advertisement_count(self, obj):
         return obj.advertisement_count
-
-    # Аннотация подписчиков
-    def get_queryset(self, request):
-        queryset = super().get_queryset(request)
-        return queryset.annotate(subscriber_count=Count("subscribers", distinct=True))
 
     # Пользовательское отображение количества подписчиков
     @admin.display(description="Количество подписчиков", ordering="subscriber_count")
