@@ -1,14 +1,15 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.http import HttpResponse
+from django.utils.safestring import mark_safe
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
-from django.contrib.admin import SimpleListFilter
 import matplotlib.pyplot as plt
 import io
 from django.db.models import Q
 from .models import *
+
 
 # Админка для модели User
 @admin.register(User)
@@ -46,7 +47,13 @@ class UserAdmin(admin.ModelAdmin):
 @admin.register(Agency)
 class AgencyAdmin(admin.ModelAdmin):
     # Отображаем название и статистику по агентству
-    list_display = ("name", "created_at", "get_agent_count", "get_advertisement_count")
+    list_display = (
+        "name",
+        "created_at",
+        "get_subscriber_count",
+        "get_agent_count",
+        "get_advertisement_count",
+    )
     search_fields = ("name",)
     ordering = ("created_at",)
     readonly_fields = ("get_agent_count", "get_advertisement_count")
@@ -60,6 +67,16 @@ class AgencyAdmin(admin.ModelAdmin):
     @admin.display(description="Количество объявлений")
     def get_advertisement_count(self, obj):
         return obj.advertisement_count
+
+    # Аннотация подписчиков
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(subscriber_count=Count("subscribers", distinct=True))
+
+    # Пользовательское отображение количества подписчиков
+    @admin.display(description="Количество подписчиков", ordering="subscriber_count")
+    def get_subscriber_count(self, obj):
+        return getattr(obj, "subscriber_count", 0)
 
 
 # Админка для модели Agent
@@ -98,30 +115,41 @@ class CategoryAdmin(admin.ModelAdmin):
 # Админка для модели Advertisement
 @admin.register(Advertisement)
 class AdvertisementAdmin(admin.ModelAdmin):
-    list_display = ("title", "display_price", "status", "date_posted", "advertisement_file", "external_url")
-    list_filter = ("status", "property_type", "category")
+    list_display = (
+        "title",
+        "display_price",
+        "status",
+        "date_posted",
+        "advertisement_file",
+        "external_url",
+    )
+    list_filter = ("status", "category", "property_type")
     search_fields = ("title", "description", "external_url")
     list_display_links = ("title",)
     date_hierarchy = "date_posted"
     raw_id_fields = ("user",)
-    # readonly_fields = ("slug", "external_url")  # Устанавливаем эти поля как доступные только для чтения
+    readonly_fields = (
+        "slug",
+        "external_url",
+    )  # Устанавливаем эти поля как доступные только для чтения
 
     # Показываем цену в более читабельном формате
     @admin.display(description="Цена", ordering="price")
     def display_price(self, obj):
         return obj.formatted_price()
-    
-    def get_search_results(self, request, queryset, search_term):
-        # Стандартный icontains-поиск (регистр НЕ важен)
-        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
 
-        # Расширим его нашим кастомным contains-поиском (регистр ВАЖЕН)
+    def get_search_results(self, request, queryset, search_term):
+        if not search_term:
+            return queryset, False
+        # Стандартный поиск
+        queryset, use_distinct = super().get_search_results(
+            request, queryset, search_term
+        )
+        # Расширенный contains-поиск
         contains_qs = self.model.objects.filter(
-            Q(title__contains=search_term) |
-            Q(description__contains=search_term)
+            Q(title__contains=search_term) | Q(description__contains=search_term)
         )
 
-        # Объединяем оба queryset'а и исключаем дубли
         final_qs = queryset | contains_qs
         return final_qs.distinct(), use_distinct
 
@@ -130,16 +158,15 @@ class AdvertisementAdmin(admin.ModelAdmin):
 @admin.register(Photo)
 class PhotoAdmin(admin.ModelAdmin):
     list_display = ("advertisement", "get_image_preview", "display_order")
-    list_filter = ("advertisement",)
     search_fields = ("advertisement__title",)
+    raw_id_fields = ("advertisement",)
 
     def get_image_preview(self, obj):
         if obj.image:
-            return f'<img src="{obj.image.url}" width="100" />'
+            return mark_safe(f'<img src="{obj.image.url}" width="100" />')
         return "Нет изображения"
 
     get_image_preview.short_description = "Изображение"
-    get_image_preview.allow_tags = True  # Разрешаем HTML для отображения тега img
 
 
 # Админка для модели Review
@@ -177,10 +204,16 @@ class FavoriteAdvertisementAdmin(admin.ModelAdmin):
 # Админка для модели уведомлений
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
-    list_display = ("user", "notification_type", "created_at", "status")
+    list_display = (
+        "user",
+        "advertisement",
+        "notification_type",
+        "created_at",
+        "status",
+    )
     list_filter = ("notification_type", "status")
     search_fields = ("user__name", "message")
-    raw_id_fields = ("user",)
+    raw_id_fields = ("user", "advertisement")
 
 
 # Админка для модели статистики
@@ -203,12 +236,12 @@ class StatisticsAdmin(admin.ModelAdmin):
 
         # Создание круговой диаграммы
         fig, ax = plt.subplots()
-        ax.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors, startangle=90)
+        ax.pie(sizes, labels=labels, autopct="%1.1f%%", colors=colors, startangle=90)
         ax.axis("equal")
 
         # Сохраняем диаграмму во временный буфер
         img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='PNG')
+        plt.savefig(img_buffer, format="PNG")
         plt.close(fig)
         img_buffer.seek(0)
 
@@ -231,17 +264,14 @@ class StatisticsAdmin(admin.ModelAdmin):
 # Админка для модели AgencySubscription
 @admin.register(AgencySubscription)
 class AgencySubscriptionAdmin(admin.ModelAdmin):
+    raw_id_fields = ("user", "agency")
     # Отображаемые поля
-    list_display = ("user", "agency", "subscribed_at")
-
+    list_display = ("user", "agency")
     # Поиск по пользователям и агентствам
     search_fields = ("user__name", "agency__name")
-
     # Фильтрация по агентствам
     list_filter = ("agency",)
-
     # Сортировка по дате подписки
     ordering = ("subscribed_at",)
-
     # Поле только для чтения
     readonly_fields = ("subscribed_at",)

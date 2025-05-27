@@ -59,17 +59,35 @@ class UserSerializer(BaseUserSerializer):
 
 
 # Сериализатор для модели объявлений
-class AdvertisementSerializer(ModelSerializer):
+from rest_framework import serializers
+from .models import Advertisement
+
+
+class AdvertisementSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(
+        read_only=True
+    )  # Отобразит __str__ пользователя
+    property_type = serializers.StringRelatedField(read_only=True)
+    location = serializers.StringRelatedField(read_only=True)
+    category = serializers.StringRelatedField(read_only=True)
+
     class Meta:
         model = Advertisement
         fields = [
             "id",
             "title",
             "description",
-            "created_at",
-            "is_active",
-            "owner",
+            "price",
+            "square",
+            "user",
             "property_type",
+            "location",
+            "category",
+            "date_posted",
+            "status",
+            "advertisement_file",
+            "external_url",
+            "slug",
         ]
 
 

@@ -13,6 +13,7 @@ from django.db.models import Count, Avg, Sum
 from project.settings import SITE_NAME
 from unidecode import unidecode
 
+
 # Модель агентства недвижимости
 class Agency(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
@@ -24,6 +25,12 @@ class Agency(models.Model):
 
     def __str__(self):
         return self.name
+
+    @staticmethod
+    def with_subscriber_count():
+        return Agency.objects.annotate(
+            subscriber_count=Count("subscribers", distinct=True)
+        )
 
     @property
     def agent_count(self):
@@ -120,12 +127,18 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 # Связь между агенством и подписчиками агенства
 class AgencySubscription(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    agency = models.ForeignKey(Agency, on_delete=models.CASCADE)
-    subscribed_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="Пользователь"
+    )
+    agency = models.ForeignKey(
+        Agency, on_delete=models.CASCADE, verbose_name="Агентство"
+    )
+    subscribed_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="Дата подписки"
+    )
 
     class Meta:
-        unique_together = ("user", "agency")  # чтобы не было дублей
+        unique_together = ("user", "agency")
         verbose_name = "Подписка на агенства"
         verbose_name_plural = "Подписки на агенства"
 
@@ -208,12 +221,17 @@ class Advertisement(models.Model):
         max_length=10, choices=STATUS_CHOICES, default="draft", verbose_name="Статус"
     )
     advertisement_file = models.FileField(
-        upload_to="advertisements_files/", null=True, blank=True, verbose_name="Файл объявления"
+        upload_to="advertisements_files/",
+        null=True,
+        blank=True,
+        verbose_name="Файл объявления",
     )
     external_url = models.URLField(
         max_length=500, null=True, blank=True, verbose_name="Внешняя ссылка"
     )
-    slug = models.SlugField(max_length=255, unique=True, blank=True, null=True, verbose_name="Слаг")
+    slug = models.SlugField(
+        max_length=255, unique=True, blank=True, null=True, verbose_name="Слаг"
+    )
 
     class Meta:
         verbose_name = "Объявление"
@@ -256,7 +274,7 @@ class Advertisement(models.Model):
         elif self.price >= 1_000:
             return f"{self.price / 1_000:.2f} тыс"
         return f"{self.price:.2f} руб."
-    
+
 
 # Файл к объявлению (планировка или договор)
 class AdvertisementFile(models.Model):
@@ -282,7 +300,9 @@ class Photo(models.Model):
         related_name="photos",
         verbose_name="Объявление",
     )
-    image = models.ImageField(upload_to="photos/", verbose_name="Изображение", null=True)
+    image = models.ImageField(
+        upload_to="photos/", verbose_name="Изображение", null=True
+    )
     display_order = models.IntegerField(verbose_name="Порядок отображения")
 
     class Meta:
@@ -360,15 +380,25 @@ class Notification(models.Model):
         ("ad_rented", "Недвижимость арендована"),
     ]
 
+    STATUS_CHOICES = [
+        ("sent", "Отправлено"),
+        ("read", "Прочитано"),
+        ("archived", "В архиве"),
+    ]
+
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
     advertisement = models.ForeignKey(
         Advertisement, on_delete=models.CASCADE, verbose_name="Объявление"
     )
-    notification_type = models.CharField(max_length=50, verbose_name="Тип уведомления")
+    notification_type = models.CharField(
+        max_length=50, choices=NOTIFICATION_TYPE_CHOICES, verbose_name="Тип уведомления"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    status = models.CharField(max_length=50, verbose_name="Статус")
+    status = models.CharField(
+        max_length=50, choices=STATUS_CHOICES, verbose_name="Статус"
+    )
     message = models.TextField(verbose_name="Сообщение")
 
     class Meta:
@@ -376,7 +406,9 @@ class Notification(models.Model):
         verbose_name_plural = "Уведомления"
 
     def __str__(self):
-        return f"Уведомление для {self.user.name}: {self.notification_type}"
+        return (
+            f"Уведомление для {self.user.name}: {self.get_notification_type_display()}"
+        )
 
 
 # Модель статистики пользователей и объявлений
@@ -396,4 +428,4 @@ class Statistics(models.Model):
 # Кастомная функция
 def custom_slugify(value):
     value = unidecode(value)  # Транслитерация
-    return slugify(value) 
+    return slugify(value)

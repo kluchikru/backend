@@ -5,7 +5,7 @@ from .views import *
 
 # Регистрация ViewSet'ов в роутере
 router = routers.DefaultRouter()
-router.register("users", UsersViewSet)
+router.register("advertisements", AdvertisementViewSet, basename="advertisement")
 router.register("types-of-advertisement", TypesOfAdvertisementViewSet)
 
 # Получение маршрутов
