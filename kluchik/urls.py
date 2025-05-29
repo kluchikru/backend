@@ -1,9 +1,6 @@
 from rest_framework import routers
-
 from .views import *
 
-
-# Регистрация ViewSet'ов в роутере
 router = routers.DefaultRouter()
 router.register("advertisements", AdvertisementListViewSet, basename="advertisements")
 router.register(
@@ -16,8 +13,11 @@ router.register(
     PopularAdvertisementViewSet,
     basename="advertisements-popular",
 )
+router.register("advertisements-favorite", FavoriteAdvertisementsListView, basename='advertisements-favorite')
+router.register("my-advertisements", MyAdvertisementListView, basename='my-advertisements')
 router.register("agency-popular", PopularAgenciesViewSet, basename="agency-popular")
+router.register("notifications", UserNotificationListView, basename="notifications")
+router.register("notifications-archived", ArchivedNotificationListView, basename="notifications-archived")
 router.register("types-of-advertisement", TypesOfAdvertisementViewSet)
 
-# Получение маршрутов
 urlpatterns = router.urls

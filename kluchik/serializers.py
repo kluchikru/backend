@@ -90,13 +90,45 @@ class AdvertisementListSerializer(serializers.ModelSerializer):
         return None
 
 
+# Сериализатор для модели объявлений в профиле пользователя
+class MyAdvertisementListSerializer(serializers.ModelSerializer):
+    location = serializers.StringRelatedField(read_only=True)
+    category = serializers.StringRelatedField(read_only=True)
+    property_type = serializers.StringRelatedField(read_only=True)
+    image = serializers.SerializerMethodField()  # Поле для первой фотки
+
+    class Meta:
+        model = Advertisement
+        fields = [
+            "id",
+            "title",
+            "price",
+            "square",
+            "location",
+            "category",
+            "property_type",
+            "external_url",
+            "status",
+            "image",
+        ]
+
+    def get_image(self, obj):
+        first_photo = obj.photos.order_by("display_order").first()
+        if first_photo and first_photo.image:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(first_photo.image.url)
+            return first_photo.image.url
+        return None
+
+
 # Сериализатор для последнего объявления (используется в главной странице - виджет)
 class LatestAdvertisementSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
 
     class Meta:
         model = Advertisement
-        fields = ["id", "title", "price", "image", "category"]
+        fields = ["id", "title", "price", "image", "category", "external_url"]
 
     def get_image(self, obj):
         first_photo = obj.photos.order_by("display_order").first()
@@ -118,7 +150,13 @@ class PopularAgencySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Agency
-        fields = ["id", "name", "subscriber_count", "active_ads_count", "annotated_agent_count"]
+        fields = [
+            "id",
+            "name",
+            "subscriber_count",
+            "active_ads_count",
+            "annotated_agent_count",
+        ]
 
     def get_active_ads_count(self, obj):
         return obj.advertisements.filter(status="active").count()
@@ -127,7 +165,7 @@ class PopularAgencySerializer(serializers.ModelSerializer):
 # Сериализатор для отображения популяного объявления (используется в главной странице - виджет)
 class PopularAdvertisementSerializer(serializers.ModelSerializer):
     favorite_count = serializers.IntegerField()
-    image = serializers.SerializerMethodField()  
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Advertisement
@@ -138,6 +176,7 @@ class PopularAdvertisementSerializer(serializers.ModelSerializer):
             "favorite_count",
             "category",
             "image",
+            "external_url",
         ]
 
     def get_image(self, obj):
@@ -150,6 +189,101 @@ class PopularAdvertisementSerializer(serializers.ModelSerializer):
                 else first_photo.image.url
             )
         return None
+
+
+# Сериализатор для детального просмотра объявления
+class AdvertisementDetailSerializer(serializers.ModelSerializer):
+    location = serializers.StringRelatedField(read_only=True)
+    category = serializers.StringRelatedField(read_only=True)
+    property_type = serializers.StringRelatedField(read_only=True)
+    agency = serializers.StringRelatedField(read_only=True)
+    photos = serializers.SerializerMethodField()
+    phone_number = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    surname = serializers.SerializerMethodField()
+    patronymic = serializers.SerializerMethodField()
+    is_favorite = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Advertisement
+        fields = [
+            "id",
+            "title",
+            "description",
+            "price",
+            "square",
+            "location",
+            "category",
+            "property_type",
+            "agency",
+            "status",
+            "date_posted",
+            "external_url",
+            "photos",
+            "phone_number",
+            "name",
+            "surname",
+            "patronymic",
+            "is_favorite",
+        ]
+
+    def get_photos(self, obj):
+        photos = obj.photos.order_by("display_order")
+        request = self.context.get("request")
+        return [
+            request.build_absolute_uri(photo.image.url) if request else photo.image.url
+            for photo in photos
+            if photo.image
+        ]
+
+    def get_phone_number(self, obj):
+        return obj.user.phone_number if obj.user else None
+
+    def get_name(self, obj):
+        return obj.user.name if obj.user else None
+
+    def get_surname(self, obj):
+        return obj.user.surname if obj.user else None
+
+    def get_patronymic(self, obj):
+        return obj.user.patronymic if obj.user else None
+
+    def get_is_favorite(self, ad):
+        request = self.context.get("request")
+        user = request.user if request else None
+        if user and user.is_authenticated:
+            return FavoriteAdvertisement.objects.filter(
+                user=user, advertisement=ad
+            ).exists()
+        return None
+
+
+# Сериализатор для уведомлений
+class NotificationSerializer(serializers.ModelSerializer):
+    advertisement_title = serializers.CharField(
+        source="advertisement.title", read_only=True
+    )
+    advertisement_url = serializers.CharField(
+        source="advertisement.external_url", read_only=True
+    )
+    notification_type_display = serializers.CharField(
+        source="get_notification_type_display", read_only=True
+    )
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = [
+            "id",
+            "notification_type",
+            "notification_type_display",
+            "status",
+            "status_display",
+            "created_at",
+            "message",
+            "advertisement_title",
+            "advertisement_url",
+        ]
 
 
 # Сериализатор для модели объявлений

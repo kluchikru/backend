@@ -2,14 +2,28 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
-
-from kluchik.views import CustomTokenObtainPairViewSet, SetPhoneNumberView
+from kluchik.views import (
+    CustomTokenObtainPairViewSet,
+    SetPhoneNumberView,
+    AdvertisementDetailViewSet,
+    NotificationStatusUpdateView,
+)
 
 
 # === Основные URL-маршруты проекта ===
 
 urlpatterns = [
     path("admin/", admin.site.urls),  # Панель администратора Django
+    path(
+        "api/advertisements/<slug:slug>/",
+        AdvertisementDetailViewSet.as_view({"get": "retrieve"}),
+        name="advertisement-detail",
+    ),
+    path(
+        "api/notifications/<int:pk>/status",
+        NotificationStatusUpdateView.as_view({"get": "retrieve"}),
+        name="notification-status-update",
+    ),
     path("api/", include("kluchik.urls")),  # Основное API (приложение kluchik)
     # Обновление номера телефона (требуется авторизация)
     path(
