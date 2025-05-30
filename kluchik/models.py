@@ -35,7 +35,7 @@ class Agency(models.Model):
     def advertisement_count(self):
         """Количество объявлений, связанных с агентством"""
         return self.advertisements.count()
-    
+
     @staticmethod
     def with_count():
         return Agency.objects.annotate(
@@ -341,6 +341,7 @@ class Review(models.Model):
         verbose_name="Оценка",
     )
     comment = models.TextField(verbose_name="Комментарий")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
         verbose_name = "Отзыв"

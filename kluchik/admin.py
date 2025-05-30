@@ -176,7 +176,7 @@ class PhotoAdmin(admin.ModelAdmin):
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ("advertisement", "user", "display_rating_stars", "short_comment")
-    list_filter = ("rating",)
+    list_filter = ("rating", "created_at")
     search_fields = ("advertisement__title", "user__name", "user__surname")
     raw_id_fields = ("user", "advertisement")
 

@@ -13,11 +13,22 @@ router.register(
     PopularAdvertisementViewSet,
     basename="advertisements-popular",
 )
-router.register("advertisements-favorite", FavoriteAdvertisementsListView, basename='advertisements-favorite')
-router.register("my-advertisements", MyAdvertisementListView, basename='my-advertisements')
+router.register(
+    "advertisements-favorite",
+    FavoriteAdvertisementsListView,
+    basename="advertisements-favorite",
+)
+router.register(
+    "my-advertisements", MyAdvertisementListView, basename="my-advertisements"
+)
 router.register("agency-popular", PopularAgenciesViewSet, basename="agency-popular")
 router.register("notifications", UserNotificationListView, basename="notifications")
-router.register("notifications-archived", ArchivedNotificationListView, basename="notifications-archived")
+router.register(
+    "notifications-archived",
+    ArchivedNotificationListView,
+    basename="notifications-archived",
+)
+router.register("reviews", ReviewViewSet, basename="reviews")
 router.register("types-of-advertisement", TypesOfAdvertisementViewSet)
 
 urlpatterns = router.urls

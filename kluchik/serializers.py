@@ -202,6 +202,7 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     surname = serializers.SerializerMethodField()
     patronymic = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
 
     class Meta:
@@ -224,6 +225,7 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
             "name",
             "surname",
             "patronymic",
+            "email",
             "is_favorite",
         ]
 
@@ -247,6 +249,9 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
 
     def get_patronymic(self, obj):
         return obj.user.patronymic if obj.user else None
+
+    def get_email(self, obj):
+        return obj.user.email if obj.user else None
 
     def get_is_favorite(self, ad):
         request = self.context.get("request")
@@ -284,6 +289,16 @@ class NotificationSerializer(serializers.ModelSerializer):
             "advertisement_title",
             "advertisement_url",
         ]
+
+
+# Сериализатор для отзывов у объявления
+class ReviewSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
+
+    class Meta:
+        model = Review
+        fields = ["id", "advertisement", "user", "rating", "comment", "created_at", "user_id"]
 
 
 # Сериализатор для модели объявлений

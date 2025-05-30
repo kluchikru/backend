@@ -207,6 +207,35 @@ class NotificationStatusUpdateView(ModelViewSet):
         return Response(serializer.data)
 
 
+# Представление для управления отзывами к объявлениям
+class ReviewViewSet(ModelViewSet):
+    serializer_class = ReviewSerializer
+    queryset = Review.objects.all()
+
+    def get_queryset(self):
+        if self.action == 'list':
+            advertisement_id = self.request.query_params.get("advertisement")
+            if advertisement_id:
+                return Review.objects.filter(advertisement_id=advertisement_id).order_by("-created_at")
+            return Review.objects.none()
+        return Review.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        review = self.get_object()
+        if review.user != self.request.user:
+            raise PermissionDenied("Редактировать можно только свои отзывы.")
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        review = self.get_object()
+        if review.user != request.user:
+            raise PermissionDenied("Удалять можно только свои отзывы.")
+        return super().destroy(request, *args, **kwargs)
+
+
 # Представление для управления типами недвижимости
 class TypesOfAdvertisementViewSet(ReadOnlyModelViewSet):
     queryset = PropertyType.objects.all()
