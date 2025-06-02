@@ -198,6 +198,7 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
     category = serializers.StringRelatedField(read_only=True)
     property_type = serializers.StringRelatedField(read_only=True)
     agency = serializers.StringRelatedField(read_only=True)
+    agency_url = serializers.SerializerMethodField()
     photos = serializers.SerializerMethodField()
     phone_number = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
@@ -218,6 +219,7 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
             "category",
             "property_type",
             "agency",
+            "agency_url",
             "status",
             "date_posted",
             "external_url",
@@ -253,6 +255,9 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
 
     def get_email(self, obj):
         return obj.user.email if obj.user else None
+    
+    def get_agency_url(self, obj):
+        return obj.agency.external_url if obj.agency else None
 
     def get_is_favorite(self, ad):
         request = self.context.get("request")
@@ -285,6 +290,8 @@ class AgencyDetailSerializer(serializers.ModelSerializer):
     annotated_agent_count = serializers.IntegerField()
     agents = AgentShortSerializer(many=True, read_only=True)
     advertisements = AdvertisementListSerializer(many=True, read_only=True)
+    is_favorite = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Agency
@@ -299,10 +306,20 @@ class AgencyDetailSerializer(serializers.ModelSerializer):
             "annotated_agent_count",
             "agents",
             "advertisements",
+            "is_favorite"
         ]
 
     def get_active_ads_count(self, obj):
         return obj.advertisements.filter(status="active").count()
+    
+    def get_is_favorite(self, agency):
+        request = self.context.get("request")
+        user = request.user if request else None
+        if user and user.is_authenticated:
+            return AgencySubscription.objects.filter(
+                user=user, agency=agency
+            ).exists()
+        return None
 
 
 # Сериализатор для уведомлений
