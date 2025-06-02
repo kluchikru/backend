@@ -56,7 +56,12 @@ class AgencyAdmin(admin.ModelAdmin):
     )
     search_fields = ("name",)
     ordering = ("created_at",)
-    readonly_fields = ("get_agent_count", "get_advertisement_count")
+    readonly_fields = (
+        "get_agent_count",
+        "get_advertisement_count",
+        "slug",
+        "external_url",
+    )
 
     # Аннотация
     def get_queryset(self, request):

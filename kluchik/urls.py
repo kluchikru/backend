@@ -3,6 +3,7 @@ from .views import *
 
 router = routers.DefaultRouter()
 router.register("advertisements", AdvertisementListViewSet, basename="advertisements")
+router.register("agencies", AgencyListViewSet, basename="agencies")
 router.register(
     "advertisements-latest",
     LatestAdvertisementsViewSet,
@@ -17,6 +18,11 @@ router.register(
     "advertisements-favorite",
     FavoriteAdvertisementsListView,
     basename="advertisements-favorite",
+)
+router.register(
+    "agencies-favorite",
+    FavoriteAgenciesListView,
+    basename="agencies-favorite",
 )
 router.register(
     "my-advertisements", MyAdvertisementListView, basename="my-advertisements"

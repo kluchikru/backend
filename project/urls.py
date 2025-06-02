@@ -6,6 +6,7 @@ from kluchik.views import (
     CustomTokenObtainPairViewSet,
     SetPhoneNumberView,
     AdvertisementDetailViewSet,
+    AgencyDetailViewSet,
     NotificationStatusUpdateView,
 )
 
@@ -18,6 +19,11 @@ urlpatterns = [
         "api/advertisements/<slug:slug>/",
         AdvertisementDetailViewSet.as_view({"get": "retrieve"}),
         name="advertisement-detail",
+    ),
+    path(
+        "api/agencies/<slug:slug>/",
+        AgencyDetailViewSet.as_view({"get": "retrieve"}),
+        name="agency-detail",
     ),
     path(
         "api/notifications/<int:pk>/status",

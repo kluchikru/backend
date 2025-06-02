@@ -69,9 +69,7 @@ class PopularAdvertisementViewSet(ReadOnlyModelViewSet):
 # Представление для получения детальной информации об объявлении
 class AdvertisementDetailViewSet(ReadOnlyModelViewSet):
     serializer_class = AdvertisementDetailSerializer
-    filter_backends = [SearchFilter]
-    search_fields = ["title", "description"]
-    lookup_field = "slug"  # <-- Ищем по slug вместо pk
+    lookup_field = "slug"
 
     def get_queryset(self):
         return (
@@ -213,10 +211,12 @@ class ReviewViewSet(ModelViewSet):
     queryset = Review.objects.all()
 
     def get_queryset(self):
-        if self.action == 'list':
+        if self.action == "list":
             advertisement_id = self.request.query_params.get("advertisement")
             if advertisement_id:
-                return Review.objects.filter(advertisement_id=advertisement_id).order_by("-created_at")
+                return Review.objects.filter(
+                    advertisement_id=advertisement_id
+                ).order_by("-created_at")
             return Review.objects.none()
         return Review.objects.all()
 
@@ -234,6 +234,89 @@ class ReviewViewSet(ModelViewSet):
         if review.user != request.user:
             raise PermissionDenied("Удалять можно только свои отзывы.")
         return super().destroy(request, *args, **kwargs)
+
+
+#
+class AgencyDetailViewSet(ReadOnlyModelViewSet):
+    serializer_class = AgencyDetailSerializer
+    lookup_field = "slug"
+
+    def get_queryset(self):
+        return Agency.objects.annotate(
+            subscriber_count=Count("subscribers", distinct=True),
+            annotated_agent_count=Count("agents", distinct=True),
+        ).prefetch_related(
+            "agents__user",
+            "advertisements__location",
+            "advertisements__category",
+            "advertisements__property_type",
+            "advertisements__photos",
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request  # для абсолютного пути фото
+        return context
+
+
+# Представление для получения списка агентств
+class AgencyListViewSet(ReadOnlyModelViewSet):
+    serializer_class = AgencyListSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ["name"]
+
+    queryset = Agency.objects.annotate(
+        subscriber_count=Count("subscribers", distinct=True),
+        annotated_agent_count=Count("agents", distinct=True),
+        # active_ads_count мы считаем через метод get_active_ads_count в сериализаторе
+    )
+
+# Представление для получения избранных агентств пользователя
+class FavoriteAgenciesListView(ModelViewSet):
+    serializer_class = AgencyListSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        # Получаем избранные агентства пользователя через связь AgencySubscription
+        return Agency.objects.filter(subscribers=user).annotate(
+            subscriber_count=Count("subscribers", distinct=True),
+            annotated_agent_count=Count("agents", distinct=True),
+        )
+
+    @action(detail=False, methods=["post"])
+    def add(self, request):
+        user = request.user
+        agency_id = request.data.get("agency_id")
+        if not agency_id:
+            return Response(
+                {"error": "agency_id required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Создаем подписку (если не существует)
+        subscription, created = AgencySubscription.objects.get_or_create(
+            user=user, agency_id=agency_id
+        )
+        if created:
+            return Response({"status": "added"}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({"status": "already exists"}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["delete"])
+    def remove(self, request):
+        user = request.user
+        agency_id = request.data.get("agency_id")
+        if not agency_id:
+            return Response(
+                {"error": "agency_id required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        deleted, _ = AgencySubscription.objects.filter(
+            user=user, agency_id=agency_id
+        ).delete()
+        if deleted:
+            return Response({"status": "removed"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"status": "not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 # Представление для управления типами недвижимости

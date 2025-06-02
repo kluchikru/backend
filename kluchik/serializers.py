@@ -153,6 +153,7 @@ class PopularAgencySerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "external_url",
             "subscriber_count",
             "active_ads_count",
             "annotated_agent_count",
@@ -263,6 +264,47 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
         return None
 
 
+# Сериализатор краткой информации об агенте
+class AgentShortSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    email = serializers.EmailField(source="user.email")
+    phone_number = serializers.CharField(source="user.phone_number")
+
+    class Meta:
+        model = Agent
+        fields = ["full_name", "email", "phone_number"]
+
+    def get_full_name(self, obj):
+        return f"{obj.user.surname} {obj.user.name} {obj.user.patronymic}"
+
+
+# Сериализатор для детального просмотра агентства
+class AgencyDetailSerializer(serializers.ModelSerializer):
+    subscriber_count = serializers.IntegerField()
+    active_ads_count = serializers.SerializerMethodField()
+    annotated_agent_count = serializers.IntegerField()
+    agents = AgentShortSerializer(many=True, read_only=True)
+    advertisements = AdvertisementListSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Agency
+        fields = [
+            "id",
+            "name",
+            "description",
+            "created_at",
+            "external_url",
+            "subscriber_count",
+            "active_ads_count",
+            "annotated_agent_count",
+            "agents",
+            "advertisements",
+        ]
+
+    def get_active_ads_count(self, obj):
+        return obj.advertisements.filter(status="active").count()
+
+
 # Сериализатор для уведомлений
 class NotificationSerializer(serializers.ModelSerializer):
     advertisement_title = serializers.CharField(
@@ -298,7 +340,15 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ["id", "advertisement", "user", "rating", "comment", "created_at", "user_id"]
+        fields = [
+            "id",
+            "advertisement",
+            "user",
+            "rating",
+            "comment",
+            "created_at",
+            "user_id",
+        ]
 
 
 # Сериализатор для модели объявлений
@@ -326,6 +376,27 @@ class AdvertisementSerializer(serializers.ModelSerializer):
             "external_url",
             "slug",
         ]
+
+
+# Сериализатор для списка агентств (используется в ленте)
+class AgencyListSerializer(serializers.ModelSerializer):
+    subscriber_count = serializers.IntegerField()
+    active_ads_count = serializers.SerializerMethodField()
+    annotated_agent_count = serializers.IntegerField()
+
+    class Meta:
+        model = Agency
+        fields = [
+            "id",
+            "name",
+            "external_url",
+            "subscriber_count",
+            "active_ads_count",
+            "annotated_agent_count",
+        ]
+
+    def get_active_ads_count(self, obj):
+        return obj.advertisements.filter(status="active").count()
 
 
 # Сериализатор для типа недвижимости

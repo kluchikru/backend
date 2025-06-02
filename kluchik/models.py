@@ -18,6 +18,13 @@ from unidecode import unidecode
 class Agency(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     name = models.CharField(max_length=255, verbose_name="Название")
+    description = models.TextField(blank=True, null=True, verbose_name="Описание")
+    external_url = models.URLField(
+        max_length=500, null=True, blank=True, verbose_name="Внешняя ссылка"
+    )
+    slug = models.SlugField(
+        max_length=255, unique=True, blank=True, null=True, verbose_name="Слаг"
+    )
 
     class Meta:
         verbose_name = "Агентство"
@@ -25,6 +32,23 @@ class Agency(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Первый вызов — сохраняем без slug, чтобы получить id
+        if not self.id:
+            super().save(*args, **kwargs)
+
+        if not self.slug:
+            base_slug = custom_slugify(self.name)
+            self.slug = f"{base_slug}-{self.id}"
+
+        if not self.external_url:
+            self.external_url = f"{SITE_NAME}/agency/{self.slug}/"
+
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse("agency-detail", kwargs={"slug": self.slug})
 
     @property
     def agent_count(self):
