@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.filters import SearchFilter
 from django.db.models import Case, When, IntegerField
+from django_filters.rest_framework import DjangoFilterBackend
+from .filters import AdvertisementFilter
 from rest_framework.decorators import action
 from rest_framework import status
 from datetime import timedelta
@@ -18,7 +20,8 @@ from .serializers import *
 # Представление для управления объектами недвижимости
 class AdvertisementListViewSet(ReadOnlyModelViewSet):
     serializer_class = AdvertisementListSerializer
-    filter_backends = [SearchFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = AdvertisementFilter
     search_fields = ["title", "description"]
 
     def get_queryset(self):
@@ -270,6 +273,7 @@ class AgencyListViewSet(ReadOnlyModelViewSet):
         annotated_agent_count=Count("agents", distinct=True),
         # active_ads_count мы считаем через метод get_active_ads_count в сериализаторе
     )
+
 
 # Представление для получения избранных агентств пользователя
 class FavoriteAgenciesListView(ModelViewSet):

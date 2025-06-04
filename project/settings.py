@@ -18,7 +18,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Папка, где будут х
 # Включайте DEBUG только при локальной разработке
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # === Приложения ===
