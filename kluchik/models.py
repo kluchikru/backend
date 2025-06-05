@@ -219,7 +219,7 @@ class Advertisement(models.Model):
     ]
 
     title = models.CharField(max_length=200, verbose_name="Заголовок")
-    description = models.TextField(verbose_name="Описание")
+    description = models.TextField(max_length=2000, verbose_name="Описание")
     price = models.DecimalField(max_digits=20, decimal_places=2, verbose_name="Цена")
     square = models.DecimalField(max_digits=4, decimal_places=1, verbose_name="Площадь")
     user = models.ForeignKey(
@@ -267,21 +267,21 @@ class Advertisement(models.Model):
         ordering = ["-date_posted"]
 
     def save(self, *args, **kwargs):
-        # Первый вызов — сохраняем без slug, чтобы получить id
-        if not self.id:
-            super().save(*args, **kwargs)
+        is_new = self.pk is None
+        super().save(*args, **kwargs) 
 
-        # Если slug ещё не задан — генерируем
         if not self.slug:
             base_slug = custom_slugify(self.title)
-            self.slug = f"{base_slug}-{self.id}"
+            self.slug = f"{base_slug}-{self.pk}"
 
-        # Генерация внешней ссылки
         if not self.external_url:
             self.external_url = f"{SITE_NAME}/advertisement/{self.slug}/"
 
-        # Второй вызов — уже со slug и external_url
-        super().save(*args, **kwargs)
+        if is_new:
+            # Только если объект был новым — апдейт slug и external_url
+            Advertisement.objects.filter(pk=self.pk).update(
+                slug=self.slug, external_url=self.external_url
+            )
 
     def __str__(self):
         return f"{self.title} - {self.formatted_price()}"

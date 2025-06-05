@@ -134,7 +134,7 @@ class FavoriteAdvertisementsListView(ModelViewSet):
 
 
 # Представление для получения объявлений пользователя
-class MyAdvertisementListView(ReadOnlyModelViewSet):
+class MyAdvertisementListView(ModelViewSet):
     serializer_class = MyAdvertisementListSerializer
 
     def get_queryset(self):
@@ -327,6 +327,41 @@ class FavoriteAgenciesListView(ModelViewSet):
 class TypesOfAdvertisementViewSet(ReadOnlyModelViewSet):
     queryset = PropertyType.objects.all()
     serializer_class = TypesOfAdvertisementSerializer
+
+
+# Представление для управления типами недвижимости
+class CategoriesOfAdvertisementViewSet(ReadOnlyModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategoriesOfAdvertisementSerializer
+
+
+# Представление для создания объявлений
+class AdvertisementCreateViewSet(ModelViewSet):
+    queryset = Advertisement.objects.all()
+    serializer_class = AdvertisementCreateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Advertisement.objects.filter(user=self.request.user)
+
+
+# Представление для редактирования объявлений
+class AdvertisementEditViewSet(ModelViewSet):
+    queryset = Advertisement.objects.all()
+    serializer_class = AdvertisementEditSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Advertisement.objects.filter(user=self.request.user)
+
+
+# Представление для управления фотографиями объявлений
+class PhotoViewSet(ModelViewSet):
+    queryset = Photo.objects.all()
+    serializer_class = PhotoSerializer
+
+    def perform_create(self, serializer):
+        serializer.save()
 
 
 #! DJANGO 1-4

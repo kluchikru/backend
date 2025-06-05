@@ -255,7 +255,7 @@ class AdvertisementDetailSerializer(serializers.ModelSerializer):
 
     def get_email(self, obj):
         return obj.user.email if obj.user else None
-    
+
     def get_agency_url(self, obj):
         return obj.agency.external_url if obj.agency else None
 
@@ -292,7 +292,6 @@ class AgencyDetailSerializer(serializers.ModelSerializer):
     advertisements = AdvertisementListSerializer(many=True, read_only=True)
     is_favorite = serializers.SerializerMethodField()
 
-
     class Meta:
         model = Agency
         fields = [
@@ -306,19 +305,17 @@ class AgencyDetailSerializer(serializers.ModelSerializer):
             "annotated_agent_count",
             "agents",
             "advertisements",
-            "is_favorite"
+            "is_favorite",
         ]
 
     def get_active_ads_count(self, obj):
         return obj.advertisements.filter(status="active").count()
-    
+
     def get_is_favorite(self, agency):
         request = self.context.get("request")
         user = request.user if request else None
         if user and user.is_authenticated:
-            return AgencySubscription.objects.filter(
-                user=user, agency=agency
-            ).exists()
+            return AgencySubscription.objects.filter(user=user, agency=agency).exists()
         return None
 
 
@@ -421,6 +418,98 @@ class TypesOfAdvertisementSerializer(ModelSerializer):
     class Meta:
         model = PropertyType
         fields = ["id", "name", "description"]
+
+
+# Сериализатор для категории недвижимости
+class CategoriesOfAdvertisementSerializer(ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name", "description"]
+
+
+# Сериализатор для ввода локации при создании объявления
+class LocationInputSerializer(serializers.Serializer):
+    city = serializers.CharField(max_length=100)
+    district = serializers.CharField(max_length=150)
+    street = serializers.CharField(max_length=150)
+    house = serializers.CharField(max_length=15)
+
+
+# Сериализатор для создания объявления
+class AdvertisementCreateSerializer(serializers.ModelSerializer):
+    location = LocationInputSerializer()
+
+    class Meta:
+        model = Advertisement
+        fields = [
+            "id",
+            "title",
+            "description",
+            "price",
+            "square",
+            "property_type",
+            "category",
+            "location",
+            "agency",
+        ]
+
+    def create(self, validated_data):
+        location_data = validated_data.pop("location")
+        location_obj, _ = Location.objects.get_or_create(**location_data)
+        advertisement = Advertisement.objects.create(
+            location=location_obj, user=self.context["request"].user, **validated_data
+        )
+        return advertisement
+
+
+# Сериализатор для фотографий объявлений
+class PhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Photo
+        fields = ["id", "advertisement", "image", "display_order"]
+
+
+# Сериализатор для редактирования объявления
+class AdvertisementEditSerializer(serializers.ModelSerializer):
+    photos = PhotoSerializer(many=True, read_only=True)
+    photos_upload = serializers.ListField(
+        child=serializers.ImageField(), required=False, write_only=True
+    )
+
+    class Meta:
+        model = Advertisement
+        fields = ["title", "description", "price", "status", "photos", "photos_upload"]
+
+    def update(self, instance, validated_data):
+        deleted_photo_ids = self.context["request"].data.getlist("deleted_photos")
+        photos_order_json = self.context["request"].data.get("photos_order")
+        photos_upload = validated_data.pop("photos_upload", None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if deleted_photo_ids:
+            instance.photos.filter(id__in=deleted_photo_ids).delete()
+
+        if photos_order_json:
+            import json
+
+            try:
+                photos_order = json.loads(photos_order_json)
+                for item in photos_order:
+                    photo = instance.photos.filter(id=item["id"]).first()
+                    if photo:
+                        photo.display_order = item["display_order"]
+                        photo.save()
+            except Exception:
+                pass
+
+        if photos_upload is not None:
+            for idx, photo in enumerate(photos_upload):
+                instance.photos.create(image=photo, display_order=idx)
+
+        return instance
 
 
 # Кастомный сериализатор для JWT-токена (добавляет поля is_staff и is_agent)

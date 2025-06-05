@@ -36,5 +36,9 @@ router.register(
 )
 router.register("reviews", ReviewViewSet, basename="reviews")
 router.register("types-of-advertisement", TypesOfAdvertisementViewSet)
+router.register("categories-of-advertisement", CategoriesOfAdvertisementViewSet)
+router.register("advertisement-create", AdvertisementCreateViewSet, basename="advertisement-create")
+router.register("advertisement-edit", AdvertisementEditViewSet, basename="advertisement-edit")
+router.register("photo", PhotoViewSet, basename="photo")
 
 urlpatterns = router.urls
