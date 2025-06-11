@@ -481,17 +481,21 @@ class AdvertisementEditSerializer(serializers.ModelSerializer):
         fields = ["title", "description", "price", "status", "photos", "photos_upload"]
 
     def update(self, instance, validated_data):
-        deleted_photo_ids = self.context["request"].data.getlist("deleted_photos")
-        photos_order_json = self.context["request"].data.get("photos_order")
+        request = self.context["request"]
+        deleted_photo_ids = request.data.getlist("deleted_photos")
+        photos_order_json = request.data.get("photos_order")
         photos_upload = validated_data.pop("photos_upload", None)
 
+        # Обновляем поля объявления
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
+        # Удаление фото
         if deleted_photo_ids:
             instance.photos.filter(id__in=deleted_photo_ids).delete()
 
+        # Изменение порядка фото
         if photos_order_json:
             import json
 
@@ -505,9 +509,26 @@ class AdvertisementEditSerializer(serializers.ModelSerializer):
             except Exception:
                 pass
 
+        # Загрузка новых фото
         if photos_upload is not None:
             for idx, photo in enumerate(photos_upload):
                 instance.photos.create(image=photo, display_order=idx)
+
+        # 🔔 Создание уведомлений для избранных пользователей
+        favorite_users = FavoriteAdvertisement.objects.filter(
+            advertisement=instance
+        ).values_list("user", flat=True)
+        notifications = [
+            Notification(
+                user_id=user_id,
+                advertisement=instance,
+                notification_type="ad_update",
+                status="sent",
+                message=f"Объявление было обновлено.",
+            )
+            for user_id in favorite_users
+        ]
+        Notification.objects.bulk_create(notifications)
 
         return instance
 
