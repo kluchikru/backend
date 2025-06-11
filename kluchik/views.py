@@ -90,6 +90,7 @@ class AdvertisementDetailViewSet(ReadOnlyModelViewSet):
 # Представление для получения избранных объявлений пользователя
 class FavoriteAdvertisementsListView(ModelViewSet):
     serializer_class = AdvertisementListSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -157,6 +158,7 @@ class MyAdvertisementListView(ModelViewSet):
 # Представление для получения уведомлений пользователя
 class UserNotificationListView(ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         # Фильтруем уведомления пользователя, исключая "archived"
@@ -223,6 +225,11 @@ class ReviewViewSet(ModelViewSet):
             return Review.objects.none()
         return Review.objects.all()
 
+    def get_permissions(self):
+        if self.action in ["create", "update", "partial_update", "destroy"]:
+            return [IsAuthenticated()]
+        return []  # Разрешить доступ без авторизации (AllowAny)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -239,7 +246,7 @@ class ReviewViewSet(ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-#
+# Представление для получения детальной информации об агентстве
 class AgencyDetailViewSet(ReadOnlyModelViewSet):
     serializer_class = AgencyDetailSerializer
     lookup_field = "slug"
@@ -272,7 +279,7 @@ class AgencyListViewSet(ReadOnlyModelViewSet):
         subscriber_count=Count("subscribers", distinct=True),
         annotated_agent_count=Count("agents", distinct=True),
         # active_ads_count мы считаем через метод get_active_ads_count в сериализаторе
-    )
+    ).order_by("name")
 
 
 # Представление для получения избранных агентств пользователя
@@ -325,13 +332,13 @@ class FavoriteAgenciesListView(ModelViewSet):
 
 # Представление для управления типами недвижимости
 class TypesOfAdvertisementViewSet(ReadOnlyModelViewSet):
-    queryset = PropertyType.objects.all()
+    queryset = PropertyType.objects.all().order_by("name")
     serializer_class = TypesOfAdvertisementSerializer
 
 
 # Представление для управления типами недвижимости
 class CategoriesOfAdvertisementViewSet(ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.all().order_by("name")
     serializer_class = CategoriesOfAdvertisementSerializer
 
 
