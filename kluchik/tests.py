@@ -314,7 +314,7 @@ class NotificationTests(APITestCase):
         self.notification.refresh_from_db()
         self.assertEqual(self.notification.status, "read")
 
-
+# Тестирование добавления фото к объявлению
 class PhotoModelTests(APITestCase):
     def setUp(self):
         # Create test user
@@ -325,14 +325,12 @@ class PhotoModelTests(APITestCase):
             surname="User",
         )
 
-        # Create required related models
         self.property_type = PropertyType.objects.create(name="Apartment")
         self.category = Category.objects.create(name="Sale")
         self.location = Location.objects.create(
             city="Moscow", district="Central", street="Tverskaya", house="1"
         )
 
-        # Create test advertisement
         self.advertisement = Advertisement.objects.create(
             title="Test Ad",
             description="Test description",
@@ -344,7 +342,6 @@ class PhotoModelTests(APITestCase):
             category=self.category,
         )
 
-        # Create a simple test image
         image = Image.new("RGB", (100, 100))
         tmp_file = tempfile.NamedTemporaryFile(suffix=".jpg")
         image.save(tmp_file)
