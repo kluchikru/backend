@@ -2,7 +2,7 @@ import django_filters
 from django_filters.rest_framework import FilterSet
 from .models import Advertisement
 
-
+# Кастомный фильтр для объявлений
 class AdvertisementFilter(FilterSet):
     property_type = django_filters.NumberFilter(field_name="property_type_id")
     category = django_filters.NumberFilter(field_name="category_id")

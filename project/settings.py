@@ -18,7 +18,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")  # Папка, где будут х
 # Включайте DEBUG только при локальной разработке
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
 
 # === Приложения ===
@@ -210,3 +210,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # === Время жизни ссылки для восстановления пароля ===
 
 PASSWORD_RESET_TIMEOUT = 60 * 30  # 30 минут
+
+# === Мониторинг ошибок в приложении Sentry ===
+
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://183af13013b8d5bf76f0195c4ed3bd48@o4509509062098944.ingest.de.sentry.io/4509509063868496",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+)

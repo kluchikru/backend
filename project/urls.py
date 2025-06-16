@@ -10,10 +10,15 @@ from kluchik.views import (
     NotificationStatusUpdateView,
 )
 
+# Тестовая ошибка
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 
 # === Основные URL-маршруты проекта ===
 
 urlpatterns = [
+    path("sentry-debug/", trigger_error), # Мониторинг ошибок
     path("admin/", admin.site.urls),  # Панель администратора Django
     path(
         "api/advertisements/<slug:slug>/",
