@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from rest_framework.filters import SearchFilter
 from django.db.models import Case, When, IntegerField
@@ -13,6 +14,8 @@ from rest_framework.decorators import action
 from rest_framework import status
 from datetime import timedelta
 
+from typing import Any, Dict, List
+from django.db.models import QuerySet
 from .models import *
 from .serializers import *
 
@@ -29,7 +32,7 @@ class AdvertisementListViewSet(ReadOnlyModelViewSet):
     filterset_class = AdvertisementFilter
     search_fields = ["title", "description"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset активных объявлений с предварительной выборкой
         связанных объектов для оптимизации запросов.
@@ -49,7 +52,7 @@ class LatestAdvertisementsViewSet(ReadOnlyModelViewSet):
 
     serializer_class = AdvertisementListSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает последние 3 активных объявления, отсортированных по дате публикации.
         """
@@ -66,7 +69,7 @@ class PopularAgenciesViewSet(ReadOnlyModelViewSet):
 
     serializer_class = PopularAgencySerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает 3 агентства с наибольшим количеством подписчиков.
         """
@@ -81,7 +84,7 @@ class PopularAdvertisementViewSet(ReadOnlyModelViewSet):
 
     serializer_class = PopularAdvertisementSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает 3 самых популярных активных объявления,
         отсортированных по количеству добавлений в избранное и дате публикации.
@@ -109,7 +112,7 @@ class AdvertisementDetailViewSet(ReadOnlyModelViewSet):
     serializer_class = AdvertisementDetailSerializer
     lookup_field = "slug"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset активных объявлений с предварительной выборкой
         связанных объектов для повышения производительности.
@@ -120,7 +123,7 @@ class AdvertisementDetailViewSet(ReadOnlyModelViewSet):
             .prefetch_related("photos")
         )
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> Dict[str, Any]:
         """
         Добавляет объект запроса (request) в контекст сериализатора.
         """
@@ -138,7 +141,7 @@ class FavoriteAdvertisementsListView(ModelViewSet):
     serializer_class = AdvertisementListSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset объявлений, добавленных в избранное текущим пользователем.
         """
@@ -149,7 +152,7 @@ class FavoriteAdvertisementsListView(ModelViewSet):
         )
 
     @action(detail=False, methods=["post"])
-    def add(self, request):
+    def add(self, request: Request) -> Response:
         """
         Добавляет объявление в избранное текущего пользователя.
         """
@@ -169,7 +172,7 @@ class FavoriteAdvertisementsListView(ModelViewSet):
             return Response({"status": "already exists"}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["delete"])
-    def remove(self, request):
+    def remove(self, request: Request) -> Response:
         """
         Удаляет объявление из избранного текущего пользователя.
         """
@@ -197,7 +200,7 @@ class MyAdvertisementListView(ModelViewSet):
 
     serializer_class = MyAdvertisementListSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset объявлений, принадлежащих текущему пользователю,
         с аннотированным полем для упорядочивания по статусу.
@@ -227,7 +230,7 @@ class UserNotificationListView(ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset уведомлений пользователя, исключая архивированные.
         """
@@ -247,7 +250,7 @@ class ArchivedNotificationListView(ReadOnlyModelViewSet):
 
     serializer_class = NotificationSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset архивированных уведомлений пользователя.
         """
@@ -266,7 +269,7 @@ class NotificationStatusUpdateView(ModelViewSet):
     serializer_class = NotificationSerializer
     lookup_field = "pk"
 
-    def get_object(self):
+    def get_object(self) -> Notification:
         """
         Получает объект уведомления и проверяет принадлежность текущему пользователю.
         """
@@ -278,7 +281,7 @@ class NotificationStatusUpdateView(ModelViewSet):
             raise PermissionDenied("Нет доступа к этому уведомлению")
         return notification
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Обрабатывает PATCH-запрос для обновления статуса уведомления.
         """
@@ -307,7 +310,7 @@ class ReviewViewSet(ModelViewSet):
     serializer_class = ReviewSerializer
     queryset = Review.objects.all()
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset отзывов.
         """
@@ -320,7 +323,7 @@ class ReviewViewSet(ModelViewSet):
             return Review.objects.none()
         return Review.objects.all()
 
-    def get_permissions(self):
+    def get_permissions(self) -> List[Any]:
         """
         Определяет права доступа в зависимости от действия.
         """
@@ -328,13 +331,13 @@ class ReviewViewSet(ModelViewSet):
             return [IsAuthenticated()]
         return []  # Разрешить доступ без авторизации (AllowAny)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: Any) -> None:
         """
         При создании отзыва автоматически назначает пользователя.
         """
         serializer.save(user=self.request.user)
 
-    def perform_update(self, serializer):
+    def perform_update(self, serializer: Any) -> None:
         """
         Проверяет права пользователя перед обновлением отзыва.
         """
@@ -343,7 +346,7 @@ class ReviewViewSet(ModelViewSet):
             raise PermissionDenied("Редактировать можно только свои отзывы.")
         serializer.save()
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Проверяет права пользователя перед удалением отзыва.
         """
@@ -362,7 +365,7 @@ class AgencyDetailViewSet(ReadOnlyModelViewSet):
     serializer_class = AgencyDetailSerializer
     lookup_field = "slug"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset агентств с аннотациями и предварительной загрузкой связанных объектов.
         """
@@ -377,7 +380,7 @@ class AgencyDetailViewSet(ReadOnlyModelViewSet):
             "advertisements__photos",
         )
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> Dict[str, Any]:
         """
         Добавляет объект запроса в контекст сериализатора.
         """
@@ -411,7 +414,7 @@ class FavoriteAgenciesListView(ModelViewSet):
 
     serializer_class = AgencyListSerializer
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset избранных агентств текущего пользователя с аннотациями.
         """
@@ -423,7 +426,7 @@ class FavoriteAgenciesListView(ModelViewSet):
         )
 
     @action(detail=False, methods=["post"])
-    def add(self, request):
+    def add(self, request: Any) -> Response:
         """
         Добавляет агентство в список избранных пользователя.
         """
@@ -444,7 +447,7 @@ class FavoriteAgenciesListView(ModelViewSet):
             return Response({"status": "already exists"}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["delete"])
-    def remove(self, request):
+    def remove(self, request: Any) -> Response:
         """
         Удаляет агентство из списка избранных пользователя.
         """
@@ -494,7 +497,7 @@ class AdvertisementCreateViewSet(ModelViewSet):
     serializer_class = AdvertisementCreateSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset объявлений текущего пользователя.
         """
@@ -511,7 +514,7 @@ class AdvertisementEditViewSet(ModelViewSet):
     serializer_class = AdvertisementEditSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """
         Возвращает queryset объявлений текущего пользователя.
         """
@@ -527,7 +530,7 @@ class PhotoViewSet(ModelViewSet):
     queryset = Photo.objects.all()
     serializer_class = PhotoSerializer
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer: Any) -> None:
         """
         Сохраняет новую фотографию.
         """
