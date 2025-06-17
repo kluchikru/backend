@@ -13,6 +13,7 @@ from .filters import AdvertisementFilter
 from rest_framework.decorators import action
 from rest_framework import status
 from datetime import timedelta
+from silk.profiling.profiler import silk_profile
 
 from typing import Any, Dict, List
 from django.db.models import QuerySet
@@ -485,6 +486,10 @@ class CategoriesOfAdvertisementViewSet(ReadOnlyModelViewSet):
 
     queryset = Category.objects.all().order_by("name")
     serializer_class = CategoriesOfAdvertisementSerializer
+
+    @silk_profile()
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 # Представление для создания объявлений

@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
+import sentry_sdk
 import os
 
 # === Базовые настройки проекта ===
@@ -38,12 +39,14 @@ INSTALLED_APPS = [
     "djoser",  # Аутентификация через email
     # Собственные приложения
     "kluchik",
+    "silk",
 ]
 
 
 # === Middleware ===
 
 MIDDLEWARE = [
+    "silk.middleware.SilkyMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -213,11 +216,13 @@ PASSWORD_RESET_TIMEOUT = 60 * 30  # 30 минут
 
 # === Мониторинг ошибок в приложении Sentry ===
 
-import sentry_sdk
-
 sentry_sdk.init(
     dsn="https://183af13013b8d5bf76f0195c4ed3bd48@o4509509062098944.ingest.de.sentry.io/4509509063868496",
     # Add data like request headers and IP for users,
     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
     send_default_pii=True,
 )
+
+# === Мониторинг запросов в Silk ===
+SILKY_PYTHON_PROFILER = True
+SILKY_PYTHON_PROFILER_BINARY = True

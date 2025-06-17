@@ -18,6 +18,7 @@ def trigger_error(request):
 # === Основные URL-маршруты проекта ===
 
 urlpatterns = [
+    path('silk/', include('silk.urls', namespace='silk')),  # Django Silk для профилирования
     path("sentry-debug/", trigger_error), # Мониторинг ошибок
     path("admin/", admin.site.urls),  # Панель администратора Django
     path(
