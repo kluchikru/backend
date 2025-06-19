@@ -9,7 +9,23 @@ import matplotlib.pyplot as plt
 import io
 from django.db.models import Q
 from .models import *
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
+import json
 
+
+# создадим задачу при запуске (только 1 раз нужно):
+def create_periodic_task():
+    schedule, _ = IntervalSchedule.objects.get_or_create(
+        every=1,
+        period=IntervalSchedule.DAYS,
+    )
+
+    PeriodicTask.objects.get_or_create(
+        interval=schedule,
+        name="Collect daily statistics",
+        task="kluchik.tasks.collect_daily_statistics",
+        defaults={"args": json.dumps([])},
+    )
 
 # Админка для модели User
 @admin.register(User)

@@ -226,3 +226,10 @@ sentry_sdk.init(
 # === Мониторинг запросов в Silk ===
 SILKY_PYTHON_PROFILER = True
 SILKY_PYTHON_PROFILER_BINARY = True
+
+# === Планировщик задач Celery ===
+CELERY_BROKER_URL = "redis://localhost:6379/0"  # или другой URL Redis
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+
+INSTALLED_APPS += ["django_celery_beat"]
