@@ -8,7 +8,9 @@ from kluchik.views import (
     AdvertisementDetailViewSet,
     AgencyDetailViewSet,
     NotificationStatusUpdateView,
+    social_jwt_redirect
 )
+
 
 # Тестовая ошибка
 def trigger_error(request):
@@ -18,8 +20,12 @@ def trigger_error(request):
 # === Основные URL-маршруты проекта ===
 
 urlpatterns = [
-    path('silk/', include('silk.urls', namespace='silk')),  # Django Silk для профилирования
-    path("sentry-debug/", trigger_error), # Мониторинг ошибок
+    path("auth/social/", include("social_django.urls", namespace="social")),  # OAUTH2
+    path("auth/social/jwt/", social_jwt_redirect),
+    path(
+        "silk/", include("silk.urls", namespace="silk")
+    ),  # Django Silk для профилирования
+    path("sentry-debug/", trigger_error),  # Мониторинг ошибок
     path("admin/", admin.site.urls),  # Панель администратора Django
     path(
         "api/advertisements/<slug:slug>/",

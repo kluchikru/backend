@@ -14,11 +14,14 @@ from rest_framework.decorators import action
 from rest_framework import status
 from datetime import timedelta
 from silk.profiling.profiler import silk_profile
-
+from rest_framework.exceptions import PermissionDenied
+from django.http import JsonResponse, HttpResponseRedirect
+from kluchik.serializers import CustomTokenObtainPairSerializer
 from typing import Any, Dict, List
 from django.db.models import QuerySet
-from .models import *
+from urllib.parse import urlencode
 from .serializers import *
+from .models import *
 
 
 # Представление для управления объектами недвижимости
@@ -277,8 +280,6 @@ class NotificationStatusUpdateView(ModelViewSet):
         notification = super().get_object()
         # Проверяем, что уведомление принадлежит текущему пользователю
         if notification.user != self.request.user:
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("Нет доступа к этому уведомлению")
         return notification
 
@@ -540,6 +541,22 @@ class PhotoViewSet(ModelViewSet):
         Сохраняет новую фотографию.
         """
         serializer.save()
+
+
+# OAUTH2
+def social_jwt_redirect(request):
+    user = request.user
+    if not user or not user.is_authenticated:
+        return JsonResponse({"error": "Not authenticated"}, status=401)
+
+    tokens = CustomTokenObtainPairSerializer.get_token(user)
+    params = urlencode({
+        "access": str(tokens.access_token),
+        "refresh": str(tokens),
+    })
+
+    frontend_url = f"http://localhost:8081/auth/success?{params}"
+    return HttpResponseRedirect(frontend_url)
 
 
 #! DJANGO 1-4

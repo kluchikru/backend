@@ -10,7 +10,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Внимание: храните секретный ключ в .env файле на продакшене!
-SECRET_KEY = "django-insecure-qm62lfi_za5v5tr)*3jocz$rx$j34gf44q4x$)b5$o-jo)r_#m"
+SECRET_KEY = config("SECRET_KEY")
 
 # Для загрузки медиафайлов
 MEDIA_URL = "/media/"  # URL для доступа к медиафайлам
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # Собственные приложения
     "kluchik",
     "silk",
+    "social_django",
 ]
 
 
@@ -116,6 +117,8 @@ DJOSER = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
 ]
 
 # Разрешить передачу cookie в CORS
@@ -243,3 +246,40 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 
 INSTALLED_APPS += ["django_celery_beat"]
+
+# === OAUTH2 ===
+
+AUTHENTICATION_BACKENDS = (
+    "social_core.backends.yandex.YandexOAuth2",  # Добавляем Yandex
+    "django.contrib.auth.backends.ModelBackend",  # Стандартный backend
+)
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = False  # Для локальной разработки
+SOCIAL_AUTH_JSONFIELD_ENABLED = (
+    True  # Используем JSONField вместо ForeignKey для хранения extra_data
+)
+
+SOCIAL_AUTH_USER_MODEL = "kluchik.User"
+
+SOCIAL_AUTH_YANDEX_OAUTH2_KEY = config("YANDEX_CLIENT_ID")
+SOCIAL_AUTH_YANDEX_OAUTH2_SECRET = config("YANDEX_CLIENT_SECRET")
+
+SOCIAL_AUTH_YANDEX_OAUTH2_SCOPE = [
+    "login:email",
+    "login:info",
+]
+SOCIAL_AUTH_YANDEX_OAUTH2_EXTRA_DATA = ["email", "first_name", "last_name"]
+
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.auth_allowed",
+    "social_core.pipeline.social_auth.social_user",  # 1 — ищем по UID
+    "kluchik.auth_pipeline.associate_by_email_or_create",  # 2 —  кастомная логика
+    "kluchik.auth_pipeline.save_user_profile",  # 3 — сохранение дополнительных данных
+    "social_core.pipeline.social_auth.associate_user",  # 4 — создаём связку
+    "social_core.pipeline.social_auth.load_extra_data",
+    "social_core.pipeline.user.user_details",
+)
+
+LOGIN_REDIRECT_URL = "/auth/social/jwt/"
+LOGOUT_REDIRECT_URL = "http://localhost:8081/"
