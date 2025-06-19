@@ -35,3 +35,37 @@ python manage.py collectstatic
 ```
 pip freeze > requirements.txt
 ```
+
+### Redis - https://github.com/tporadowski/redis/releases
+```
+redis-cli
+```
+
+### Celery beat
+```
+celery -A project beat -l info
+```
+
+### Celery worker
+```
+celery -A project worker -l info --pool=solo
+```
+
+### Task init
+```
+python manage.py shell
+from kluchik.tasks import task
+task.delay()
+```
+
+### MailHog - https://github.com/mailhog/MailHog/releases
+```
+python manage.py shell
+from django.core.mail import send_mail
+send_mail(
+    subject="Тестовое письмо",
+    message="Это тест MailHog + Django!",
+    from_email="test@example.com",
+    recipient_list=["anyone@example.com"],
+)
+```
