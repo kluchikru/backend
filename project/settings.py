@@ -37,10 +37,11 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",  # Хранение JWT в cookie
     "corsheaders",  # Разрешение CORS-запросов
     "djoser",  # Аутентификация через email
+    "silk", # анализ запросов
+    "django_celery_beat", # рассылка
+    "social_django", # oauth2
     # Собственные приложения
     "kluchik",
-    "silk",
-    "social_django",
 ]
 
 
@@ -51,6 +52,7 @@ MIDDLEWARE = [
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -115,10 +117,7 @@ DJOSER = {
 # === Разрешённые источники для CORS ===
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "http://localhost:8081",
-    "http://127.0.0.1:8081",
+    config("FRONTEND_URL")
 ]
 
 # Разрешить передачу cookie в CORS
@@ -127,26 +126,26 @@ CORS_ALLOW_CREDENTIALS = True
 
 # === Настройки электронной почты ===
 
-DOMAIN = "127.0.0.1:8080"
-SITE_NAME = "http://localhost:8080"
+DOMAIN = config("DOMAIN")
+SITE_NAME = config("FRONTEND_URL")
 
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_HOST = "smtp.gmail.com"
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = config("EMAIL_HOST_USER")
-# EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
-# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # === Настройки электронной почты MailHog ===
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "localhost"
-EMAIL_PORT = 1025
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = False
-EMAIL_HOST_USER = ""
-EMAIL_HOST_PASSWORD = ""
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_HOST = "localhost"
+# EMAIL_PORT = 1025
+# EMAIL_USE_TLS = False
+# EMAIL_USE_SSL = False
+# EMAIL_HOST_USER = ""
+# EMAIL_HOST_PASSWORD = ""
 
 
 # === Конфигурация шаблонов ===
@@ -215,8 +214,9 @@ USE_TZ = True
 
 # === Статические файлы ===
 
-STATIC_URL = "static/"
-
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # === Настройки по умолчанию для первичных ключей ===
 
@@ -241,11 +241,9 @@ SILKY_PYTHON_PROFILER = True
 SILKY_PYTHON_PROFILER_BINARY = True
 
 # === Планировщик задач Celery ===
-CELERY_BROKER_URL = "redis://localhost:6379/0"  # или другой URL Redis
+CELERY_BROKER_URL = config("REDIS_URL")  # или другой URL Redis
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
-
-INSTALLED_APPS += ["django_celery_beat"]
 
 # === OAUTH2 ===
 
@@ -282,4 +280,4 @@ SOCIAL_AUTH_PIPELINE = (
 )
 
 LOGIN_REDIRECT_URL = "/auth/social/jwt/"
-LOGOUT_REDIRECT_URL = "http://localhost:8081/"
+LOGOUT_REDIRECT_URL = config("FRONTEND_URL")
