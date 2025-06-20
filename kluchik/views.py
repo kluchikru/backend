@@ -20,9 +20,11 @@ from kluchik.serializers import CustomTokenObtainPairSerializer
 from typing import Any, Dict, List
 from django.db.models import QuerySet
 from urllib.parse import urlencode
+from decouple import config
 from .serializers import *
 from .models import *
 
+FRONTEND_URL = config("FRONTEND_URL")
 
 # Представление для управления объектами недвижимости
 class AdvertisementListViewSet(ReadOnlyModelViewSet):
@@ -555,7 +557,7 @@ def social_jwt_redirect(request):
         "refresh": str(tokens),
     })
 
-    frontend_url = f"http://localhost:8081/auth/success?{params}"
+    frontend_url = f"{FRONTEND_URL}auth/success?{params}"
     return HttpResponseRedirect(frontend_url)
 
 
