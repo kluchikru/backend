@@ -116,8 +116,10 @@ DJOSER = {
 
 # === Разрешённые источники для CORS ===
 
+FRONTEND_URL = config("CORS_URL")
+
 CORS_ALLOWED_ORIGINS = [
-    config("FRONTEND_URL")
+  FRONTEND_URL,
 ]
 
 # Разрешить передачу cookie в CORS
