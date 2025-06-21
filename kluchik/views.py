@@ -48,6 +48,14 @@ class AdvertisementListViewSet(ReadOnlyModelViewSet):
             .select_related("location", "category", "property_type")
             .prefetch_related("photos")
         )
+    def get_renderer_context(self):
+        context = super().get_renderer_context()
+        queryset = self.filter_queryset(self.get_queryset())
+        filterset = self.filterset_class(self.request.GET, queryset=queryset)
+        context["filter"] = filterset
+        context["form"] = filterset.form
+        print("Filter form fields:", list(filterset.form.fields.keys()))
+        return context
 
 
 # Представление для получения последних 3 объявлений
@@ -205,6 +213,7 @@ class MyAdvertisementListView(ModelViewSet):
     """
 
     serializer_class = MyAdvertisementListSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self) -> QuerySet:
         """
@@ -255,6 +264,7 @@ class ArchivedNotificationListView(ReadOnlyModelViewSet):
     """
 
     serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self) -> QuerySet:
         """

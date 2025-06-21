@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Сторонние библиотеки
     "rest_framework",  # DRF: создание API
+    "django_filters",  # Фильтрация в DRF
     "rest_framework_simplejwt.token_blacklist",  # Хранение JWT в cookie
     "corsheaders",  # Разрешение CORS-запросов
     "djoser",  # Аутентификация через email
