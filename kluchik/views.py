@@ -427,6 +427,7 @@ class FavoriteAgenciesListView(ModelViewSet):
     """
 
     serializer_class = AgencyListSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self) -> QuerySet:
         """
