@@ -27,6 +27,7 @@ def create_periodic_task():
         defaults={"args": json.dumps([])},
     )
 
+
 # Админка для модели User
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
@@ -299,3 +300,17 @@ class AgencySubscriptionAdmin(admin.ModelAdmin):
     ordering = ("subscribed_at",)
     # Поле только для чтения
     readonly_fields = ("subscribed_at",)
+
+
+#! myexam
+@admin.register(Gvexam)
+class GvexamAdmin(admin.ModelAdmin):
+    list_display = ("title", "exam_date", "is_public", "created_at")
+    list_filter = ("is_public", "created_at")
+    search_fields = ("title", "users__email")
+    filter_horizontal = ("users",)
+
+    fieldsets = (
+        (None, {"fields": ("title", "exam_date", "image", "is_public", "users")}),
+    )
+    date_hierarchy = "exam_date"

@@ -268,7 +268,7 @@ class Advertisement(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        super().save(*args, **kwargs) 
+        super().save(*args, **kwargs)
 
         if not self.slug:
             base_slug = custom_slugify(self.title)
@@ -465,9 +465,20 @@ class Gvexam(models.Model):
     title = models.CharField(max_length=255, verbose_name="Название экзамена")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     exam_date = models.DateTimeField(verbose_name="Дата проведения экзамена")
-    image = models.ImageField(upload_to='exam_images/', blank=True, null=True, verbose_name="Изображение задания")
-    users = models.ManyToManyField(User, related_name='gvexams', verbose_name="Пользователи")
+    image = models.ImageField(
+        upload_to="exam_images/",
+        blank=True,
+        null=True,
+        verbose_name="Изображение задания",
+    )
+    users = models.ManyToManyField(
+        User, related_name="gvexams", verbose_name="Пользователи"
+    )
     is_public = models.BooleanField(default=False, verbose_name="Опубликовано")
 
     def __str__(self):
         return self.title
+
+    class Meta:
+        verbose_name = "Мой экзамен"
+        verbose_name_plural = "Мои экзамены"
