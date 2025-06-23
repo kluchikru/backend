@@ -45,4 +45,7 @@ router.register(
 )
 router.register("photo", PhotoViewSet, basename="photo")
 
+#! myexam
+router.register(r'gvexams', GvexamViewSet, basename='gvexam')
+
 urlpatterns = router.urls

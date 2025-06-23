@@ -570,3 +570,26 @@ class SetPhoneNumberSerializer(Serializer):
         user.phone_number = self.validated_data["phone_number"]
         user.save()
         return user
+
+
+#! myexam
+class UserShortSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "email"]
+
+
+class GvexamSerializer(serializers.ModelSerializer):
+    users = UserShortSerializer(many=True)
+
+    class Meta:
+        model = Gvexam
+        fields = [
+            "id",
+            "title",
+            "exam_date",
+            "image",
+            "is_public",
+            "created_at",
+            "users",
+        ]

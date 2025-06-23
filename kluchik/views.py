@@ -685,3 +685,8 @@ class AdvertisementViewSetTest(ModelViewSet):
             .select_related("user", "location", "category", "property_type")
             .values("title", "price")
         )
+
+#! myexam
+class GvexamViewSet(ReadOnlyModelViewSet):
+    queryset = Gvexam.objects.all()
+    serializer_class = GvexamSerializer
