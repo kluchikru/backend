@@ -576,7 +576,7 @@ class SetPhoneNumberSerializer(Serializer):
 class UserShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email"]
+        fields = ["id", "email", "name", "surname"]
 
 
 class GvexamSerializer(serializers.ModelSerializer):
