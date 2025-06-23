@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     "django_filters",  # Фильтрация в DRF
     "rest_framework_simplejwt.token_blacklist",  # Хранение JWT в cookie
     "corsheaders",  # Разрешение CORS-запросов
-    "djoser",  # Аутентификация через email
+    "djoser",  # Аутентификация через email + JWT
     "silk", # анализ запросов
     "django_celery_beat", # рассылка
     "social_django", # oauth2
