@@ -688,5 +688,5 @@ class AdvertisementViewSetTest(ModelViewSet):
 
 #! myexam
 class GvexamViewSet(ReadOnlyModelViewSet):
-    queryset = Gvexam.objects.all()
+    queryset = Gvexam.objects.filter(is_public=True)
     serializer_class = GvexamSerializer
